@@ -1,24 +1,26 @@
-<form action="?" method="post" enctype="multipart/form-data" name="frmEdit">
+<form action="?" method="post" enctype="multipart/form-data" name="frmEdit" class="form-horizontal">
  <input type="hidden" name="mode" value="update">
  <input type="hidden" name="tab" value="settings">
  <input type="hidden" name="view_mode" value="update_settings">
  <fieldset>
-     <legend><#LANG_PIPER_TTS_SETTINGS#></legend>
-   <div>
-    <label><#LANG_PIPER_TTS_PIPER#><br>
-    <input type="text" name="piper_bin" value="[#PIPER_BIN#]" size="60">
-   </label>
+  <div class="form-group">
+   <label class="control-label col-lg-4"><#LANG_PIPER_TTS_PIPER#></label>
+   <div class="col-lg-6">
+    <input type="text" name="piper_bin" value="[#PIPER_BIN#]" class="form-control">
+   </div>
   </div>
 [#if IS_REMOTE=""#]
-  <div>
-    <label><#LANG_PIPER_TTS_MODELS_DIR#><br>
-    <input type="text" name="models_dir" value="[#MODELS_DIR#]" size="60" onchange="document.frmEdit.submit()">
-   </label>
+  <div class="form-group">
+   <label class="control-label col-lg-4"><#LANG_PIPER_TTS_MODELS_DIR#></label>
+   <div class="col-lg-6">
+    <input type="text" name="models_dir" value="[#MODELS_DIR#]" class="form-control" onchange="document.frmEdit.submit()">
+   </div>
   </div>
 [#endif#]
-  <div>
-    <label><#LANG_PIPER_TTS_MODEL#><br>
-    <select name="model" size="1" style="width:100%">
+  <div class="form-group">
+   <label class="control-label col-lg-4"><#LANG_PIPER_TTS_MODEL#></label>
+   <div class="col-lg-6">
+    <select name="model" class="form-control">
 [#if IS_REMOTE="1"#]
 [#begin REMOTE_MODELS#]
      <option value="[#VALUE#]" [#SELECTED#]>[#TITLE#]</option>
@@ -29,83 +31,96 @@
 [#end MODELS#]
 [#endif#]
     </select>
-   </label>
-  </div>
-   <div>
-      <label><#LANG_PIPER_TTS_LENGTH_SCALE#><br>
-     <input type="range" name="length_scale" min="0.5" max="1.5" step="0.01" value="[#LENGTH_SCALE#]" oninput="document.getElementById('lbl_length_scale').textContent=this.value">
-     <span id="lbl_length_scale">[#LENGTH_SCALE#]</span>
-    </label>
    </div>
-   <div>
-      <label><#LANG_PIPER_TTS_SENTENCE_SILENCE#><br>
-     <input type="range" name="sentence_silence" min="0" max="0.5" step="0.01" value="[#SENTENCE_SILENCE#]" oninput="document.getElementById('lbl_sentence_silence').textContent=this.value">
-     <span id="lbl_sentence_silence">[#SENTENCE_SILENCE#]</span>
-    </label>
+  </div>
+  <div class="form-group">
+   <label class="control-label col-lg-4"><#LANG_PIPER_TTS_LENGTH_SCALE#></label>
+   <div class="col-lg-6">
+    <input type="range" name="length_scale" min="0.5" max="1.5" step="0.01" value="[#LENGTH_SCALE#]" class="form-control" oninput="document.getElementById('lbl_length_scale').textContent=this.value" style="display:inline-block;width:calc(100% - 50px);vertical-align:middle">
+    <span id="lbl_length_scale" style="display:inline-block;width:40px;text-align:center;font-weight:bold">[#LENGTH_SCALE#]</span>
    </div>
-  <div>
-    <label><input type="checkbox" name="use_cache" value="1" [#USE_CACHE#] onchange="document.getElementById('cache_cleanup_wrap').style.display=this.checked?'':'none'"> <#LANG_PIPER_TTS_USE_CACHE#></label>
   </div>
-  <div id="cache_cleanup_wrap"[#if USE_CACHE=""#] style="display:none"[#endif#]>
-    <label style="font-weight:normal;margin-left:24px"><input type="checkbox" name="cache_cleanup" value="1" [#CACHE_CLEANUP#]> <#LANG_PIPER_TTS_CACHE_CLEANUP#></label>
+  <div class="form-group">
+   <label class="control-label col-lg-4"><#LANG_PIPER_TTS_SENTENCE_SILENCE#></label>
+   <div class="col-lg-6">
+    <input type="range" name="sentence_silence" min="0" max="0.5" step="0.01" value="[#SENTENCE_SILENCE#]" class="form-control" oninput="document.getElementById('lbl_sentence_silence').textContent=this.value" style="display:inline-block;width:calc(100% - 50px);vertical-align:middle">
+    <span id="lbl_sentence_silence" style="display:inline-block;width:40px;text-align:center;font-weight:bold">[#SENTENCE_SILENCE#]</span>
+   </div>
   </div>
-  <div>
-    <label><#LANG_PIPER_TTS_CACHE_DIR#><br>
-    <input type="text" name="cache_dir" value="[#CACHE_DIR#]" size="60">
-   </label>
+  <div class="form-group">
+   <div class="col-lg-offset-4 col-lg-6">
+    <div class="checkbox">
+     <label><input type="checkbox" name="use_cache" value="1" [#USE_CACHE#] onchange="document.getElementById('cache_cleanup_wrap').style.display=this.checked?'':'none'"> <#LANG_PIPER_TTS_USE_CACHE#></label>
+    </div>
+   </div>
   </div>
-  <div>
-    <label><#LANG_PIPER_TTS_WS_PORT#><br>
-    <input type="text" name="ws_port" value="[#WS_PORT#]" size="10">
-   </label>
+  <div class="form-group" id="cache_cleanup_wrap"[#if USE_CACHE=""#] style="display:none"[#endif#]>
+   <div class="col-lg-offset-4 col-lg-6">
+    <div class="checkbox">
+     <label><input type="checkbox" name="cache_cleanup" value="1" [#CACHE_CLEANUP#]> <#LANG_PIPER_TTS_CACHE_CLEANUP#></label>
+    </div>
+   </div>
   </div>
-   </fieldset>
-
-    <input type="submit" name="submit" value="<#LANG_UPDATE#>" class="btn btn-primary">
-    <script>
-    document.getElementById('lbl_length_scale').textContent=document.getElementsByName('length_scale')[0].value;
-    document.getElementById('lbl_sentence_silence').textContent=document.getElementsByName('sentence_silence')[0].value;
-    function installPiper(){
-      var btn=document.getElementById('install_piper_btn');
-      if(btn)btn.style.display='none';
-      var x=new XMLHttpRequest();
-      x.open('GET','/admin.php?action=piper_tts&cmd=install_piper',true);
-      x.send();
+  <div class="form-group">
+   <label class="control-label col-lg-4"><#LANG_PIPER_TTS_CACHE_DIR#></label>
+   <div class="col-lg-6">
+    <input type="text" name="cache_dir" value="[#CACHE_DIR#]" class="form-control">
+   </div>
+  </div>
+  <div class="form-group">
+   <label class="control-label col-lg-4"><#LANG_PIPER_TTS_WS_PORT#></label>
+   <div class="col-lg-6">
+    <input type="text" name="ws_port" value="[#WS_PORT#]" class="form-control" style="max-width:120px">
+   </div>
+  </div>
+ </fieldset>
+ <div class="form-actions">
+  <input type="submit" name="submit" value="<#LANG_UPDATE#>" class="btn btn-primary">
+ </div>
+ <script>
+ document.getElementById('lbl_length_scale').textContent=document.getElementsByName('length_scale')[0].value;
+ document.getElementById('lbl_sentence_silence').textContent=document.getElementsByName('sentence_silence')[0].value;
+ function installPiper(){
+  var btn=document.getElementById('install_piper_btn');
+  if(btn)btn.style.display='none';
+  var x=new XMLHttpRequest();
+  x.open('GET','/admin.php?action=piper_tts&cmd=install_piper',true);
+  x.send();
+ }
+ setInterval(function(){
+  var x=new XMLHttpRequest();
+  x.open('GET','/admin.php?action=piper_tts&cmd=check_piper_status',true);
+  x.onload=function(){
+   if(x.status!=200)return;
+   try{var r=JSON.parse(x.responseText)}catch(e){return}
+   var cd=document.getElementById('connect_status_dot');
+   var ct=document.getElementById('connect_status_text');
+   if(cd&&ct){
+    if(r.connect=='connected'){
+     cd.style.background='#28a745';ct.style.color='#28a745';ct.textContent='<#LANG_PIPER_TTS_CONNECTED#>';
+    }else{
+     cd.style.background='#dc3545';ct.style.color='#dc3545';ct.textContent='<#LANG_PIPER_TTS_DISCONNECTED#>';
     }
-    setInterval(function(){
-      var x=new XMLHttpRequest();
-      x.open('GET','/admin.php?action=piper_tts&cmd=check_piper_status',true);
-      x.onload=function(){
-        if(x.status!=200)return;
-        try{var r=JSON.parse(x.responseText)}catch(e){return}
-        var cd=document.getElementById('connect_status_dot');
-        var ct=document.getElementById('connect_status_text');
-        if(cd&&ct){
-          if(r.connect=='connected'){
-            cd.style.background='#28a745';ct.style.color='#28a745';ct.textContent='<#LANG_PIPER_TTS_CONNECTED#>';
-          }else{
-            cd.style.background='#dc3545';ct.style.color='#dc3545';ct.textContent='<#LANG_PIPER_TTS_DISCONNECTED#>';
-          }
-        }
+   }
 [#if IS_REMOTE=""#][#if ARCH_64="1"#]
-        var id=document.getElementById('install_status_dot');
-        var it=document.getElementById('install_status_text');
-        var ib=document.getElementById('install_piper_btn');
-        if(id&&it){
-          if(r.install=='installed'){
-            id.style.background='#28a745';it.style.color='#28a745';it.textContent='<#LANG_PIPER_TTS_INSTALLED_TRUE#>';
-            if(ib)ib.style.display='none';
-          }else if(r.install=='installing'){
-            id.style.background='#ffc107';it.style.color='#856404';it.textContent='<#LANG_PIPER_TTS_INSTALLED_PENDING#>';
-            if(ib)ib.style.display='none';
-          }else{
-            id.style.background='#dc3545';it.style.color='#dc3545';it.textContent='<#LANG_PIPER_TTS_INSTALLED_FALSE#>';
-            if(ib)ib.style.display='';
-          }
-        }
+   var id=document.getElementById('install_status_dot');
+   var it=document.getElementById('install_status_text');
+   var ib=document.getElementById('install_piper_btn');
+   if(id&&it){
+    if(r.install=='installed'){
+     id.style.background='#28a745';it.style.color='#28a745';it.textContent='<#LANG_PIPER_TTS_INSTALLED_TRUE#>';
+     if(ib)ib.style.display='none';
+    }else if(r.install=='installing'){
+     id.style.background='#ffc107';it.style.color='#856404';it.textContent='<#LANG_PIPER_TTS_INSTALLED_PENDING#>';
+     if(ib)ib.style.display='none';
+    }else{
+     id.style.background='#dc3545';it.style.color='#dc3545';it.textContent='<#LANG_PIPER_TTS_INSTALLED_FALSE#>';
+     if(ib)ib.style.display='';
+    }
+   }
 [#endif#][#endif#]
-      };
-      x.send();
-    },3000);
-    </script>
-  </form>
+  };
+  x.send();
+ },3000);
+ </script>
+</form>
