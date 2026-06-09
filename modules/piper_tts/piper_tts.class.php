@@ -705,29 +705,17 @@ class piper_tts extends module
                 escapeshellarg($url);
             exec($cmd . ' 2>&1', $out, $ret);
         } else {
-            $script = '/usr/local/bin/mdm-piper-tts';
-            if (is_executable($script)) {
-                $model = $this->config['MODEL'];
-                $ls = $this->config['LENGTH_SCALE'];
-                $ss = $this->config['SENTENCE_SILENCE'];
-                $cmd = $script . ' --no-play --output-file ' . escapeshellarg($path) .
-                    ' --model ' . escapeshellarg($model) .
-                    ' --length-scale ' . escapeshellarg($ls) .
-                    ' --sentence-silence ' . escapeshellarg($ss) .
-                    ' -- ' . escapeshellarg($clean);
-            } else {
-                $bin = $this->config['PIPER_BIN'];
-                $model = $this->config['MODEL'];
-                $ls = $this->config['LENGTH_SCALE'];
-                $ss = $this->config['SENTENCE_SILENCE'];
-                $cmd = 'printf %s ' . escapeshellarg($clean) . ' | ' .
-                    escapeshellarg($bin) .
-                    ' --model ' . escapeshellarg($model) .
-                    ' --length-scale ' . escapeshellarg($ls) .
-                    ' --sentence-silence ' . escapeshellarg($ss) .
-                    ' --noise-scale 0.667 --noise-w 0.8' .
-                    ' --output-file ' . escapeshellarg($path);
-            }
+            $bin = $this->config['PIPER_BIN'];
+            $model = $this->config['MODEL'];
+            $ls = $this->config['LENGTH_SCALE'];
+            $ss = $this->config['SENTENCE_SILENCE'];
+            $cmd = 'printf %s ' . escapeshellarg($clean) . ' | ' .
+                escapeshellarg($bin) .
+                ' --model ' . escapeshellarg($model) .
+                ' --length-scale ' . escapeshellarg($ls) .
+                ' --sentence-silence ' . escapeshellarg($ss) .
+                ' --noise-scale 0.667 --noise-w 0.8' .
+                ' --output-file ' . escapeshellarg($path);
             exec($cmd . ' 2>&1', $out, $ret);
         }
 

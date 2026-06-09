@@ -17,13 +17,23 @@ class pipertts extends tts_addon
 
     private function playPhraseDirect($phrase)
     {
-        $script = '/usr/local/bin/mdm-piper-tts';
+        $script = '/usr/local/bin/piper';
         if (!is_executable($script)) {
-            DebMes('pipertts: mdm-piper-tts not executable', 'terminals');
+            DebMes('pipertts: piper not executable', 'terminals');
             return false;
         }
-        $cmd = $script . ' ' . escapeshellarg($phrase);
+        $wav = tempnam(sys_get_temp_dir(), 'piper_') . '.wav';
+        $cmd = 'printf %s ' . escapeshellarg($phrase) . ' | ' . escapeshellarg($script) .
+            ' --model /opt/piper/voices/ru_RU-irina-medium/ru_RU-irina-medium.onnx' .
+            ' --output-file ' . escapeshellarg($wav) . ' 2>/dev/null';
         safe_exec($cmd, 1, $out);
+        if (!file_exists($wav)) return false;
+        if ($this->haveCmd('paplay')) {
+            safe_exec('paplay ' . escapeshellarg($wav), 1, $out);
+        } elseif ($this->haveCmd('aplay')) {
+            safe_exec('aplay -q ' . escapeshellarg($wav), 1, $out);
+        }
+        unlink($wav);
         return true;
     }
 
