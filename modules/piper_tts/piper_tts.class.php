@@ -871,13 +871,18 @@ SETUP;
         exec('sudo chmod 01777 /tmp/piper-tts 2>/dev/null');
 
         // --- .htaccess для prepend.php ---
-        $htaccess = ROOT . '.htaccess';
-        if (file_exists($htaccess)) {
-            $content = file_get_contents($htaccess);
-            $line = 'php_value auto_prepend_file ' . ROOT . 'modules/piper_tts/prepend.php';
-            if (strpos($content, 'piper_tts/prepend.php') === false) {
-                file_put_contents($htaccess, $line . "\n" . $content);
-                $log('install: added prepend to .htaccess');
+        $prependPath = ROOT . 'modules/piper_tts/prepend.php';
+        if (!file_exists($prependPath)) {
+            $log("install: prepend.php not found at $prependPath, skipping .htaccess update");
+        } else {
+            $htaccess = ROOT . '.htaccess';
+            if (file_exists($htaccess)) {
+                $content = file_get_contents($htaccess);
+                $line = 'php_value auto_prepend_file ' . $prependPath;
+                if (strpos($content, 'piper_tts/prepend.php') === false) {
+                    file_put_contents($htaccess, $line . "\n" . $content);
+                    $log('install: added prepend to .htaccess');
+                }
             }
         }
 
