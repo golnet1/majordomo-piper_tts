@@ -1,6 +1,6 @@
 <?php
 
-class pipertts extends tts_addon
+class piper_tts extends tts_addon
 {
     function __construct($terminal)
     {
@@ -19,7 +19,7 @@ class pipertts extends tts_addon
     {
         $script = '/usr/local/bin/piper';
         if (!is_executable($script)) {
-            DebMes('pipertts: piper not executable', 'terminals');
+            DebMes('piper_tts: piper not executable', 'terminals');
             return false;
         }
         $wav = tempnam(sys_get_temp_dir(), 'piper_') . '.wav';

@@ -204,19 +204,6 @@ class piper_tts extends module
         if (function_exists('DebMes')) DebMes("piper_tts: admin() called, action=" . $this->action . ", view_mode=" . $this->view_mode . ", GET_cmd=" . gr('cmd') . ", GET_voice=" . gr('voice'), 'piper_tts');
         $this->getConfig();
 
-        if (gr('cmd') == 'install_progress') {
-            while (ob_get_level()) ob_end_clean();
-            header('Content-Type: application/json');
-            $voice = preg_replace('/[^a-z]/', '', gr('voice'));
-            $f = sys_get_temp_dir() . '/piper_progress_' . $voice;
-            if (file_exists($f)) {
-                echo file_get_contents($f);
-            } else {
-                echo '{"percent":0,"file":0,"total":2}';
-            }
-            exit;
-        }
-
         if (gr('cmd') == 'check_piper_status') {
             while (ob_get_level()) ob_end_clean();
             header('Content-Type: application/json');
@@ -254,71 +241,6 @@ class piper_tts extends module
             $this->runPiperInstall();
             header('Content-Type: application/json');
             echo json_encode(array('ok' => true));
-            exit;
-        }
-
-        if (gr('cmd') == 'install_start') {
-            if (function_exists('DebMes')) DebMes("piper_tts: install_start called, voice=" . gr('voice') . " quality=" . gr('quality'), 'piper_tts');
-            header('Content-Type: application/json');
-            session_write_close();
-            set_time_limit(0);
-            $voice = gr('voice');
-            $quality = gr('quality');
-            $modelDir = $this->config['MODELS_DIR'] . '/ru_RU-' . $voice . '-' . $quality;
-            $pf = sys_get_temp_dir() . '/piper_progress_' . $voice;
-            @unlink($pf);
-            $parentDir = dirname($modelDir);
-            exec('chown -R www-data:www-data ' . escapeshellarg($parentDir) . ' 2>/dev/null');
-            if (!is_dir($modelDir)) mkdir($modelDir, 0755, true);
-            $baseUrl = $this->getModelBaseUrl($voice, $quality);
-            $files = array(
-                'ru_RU-' . $voice . '-' . $quality . '.onnx',
-                'ru_RU-' . $voice . '-' . $quality . '.onnx.json',
-            );
-            $total = count($files);
-            $ok = true;
-            for ($i = 0; $i < $total; $i++) {
-                $url = $baseUrl . '/' . $files[$i];
-                $dest = $modelDir . '/' . $files[$i];
-                if (function_exists('DebMes')) DebMes("piper_tts: curl $url -> $dest", 'piper_tts');
-                $fp = @fopen($dest, 'w');
-                if (!$fp) {
-                    if (function_exists('DebMes')) DebMes("piper_tts: fopen failed for $dest", 'piper_tts');
-                    $ok = false; break;
-                }
-                $ch = curl_init($url);
-                curl_setopt_array($ch, array(
-                    CURLOPT_FILE => $fp,
-                    CURLOPT_FOLLOWLOCATION => true,
-                    CURLOPT_TIMEOUT => 300,
-                    CURLOPT_NOPROGRESS => false,
-                    CURLOPT_PROGRESSFUNCTION => function($r, $dlSize, $dlNow, $ulSize, $ulNow) use ($pf, $total, $i) {
-                        $pct = $dlSize > 0 ? round($dlNow / $dlSize * 100) : 0;
-                        $overall = round(($i * 100 + $pct) / $total);
-                        @file_put_contents($pf, json_encode(array('percent' => $overall, 'file' => $i+1, 'total' => $total)));
-                    },
-                ));
-                $res = curl_exec($ch);
-                $err = curl_error($ch);
-                $info = curl_getinfo($ch);
-                curl_close($ch);
-                fclose($fp);
-                if (function_exists('DebMes')) DebMes("piper_tts: curl done: ok=" . ($res !== false ? 'yes' : 'no') . " err=$err http=" . ($info ? $info['http_code'] : '?'), 'piper_tts');
-                if ($res === false || !file_exists($dest) || filesize($dest) == 0) {
-                    if (function_exists('DebMes')) DebMes("piper_tts: curl failed: $err", 'piper_tts');
-                    $ok = false; break;
-                }
-            }
-            exec('chown -R www-data:www-data ' . escapeshellarg($modelDir) . ' 2>/dev/null');
-            if (!$ok) {
-                exec('rm -rf ' . escapeshellarg($modelDir));
-                @file_put_contents($pf, json_encode(array('percent' => -1, 'error' => 'download failed')));
-                if (function_exists('DebMes')) DebMes("piper_tts: install_start FAILED", 'piper_tts');
-            } else {
-                @file_put_contents($pf, json_encode(array('percent' => 100, 'file' => $total, 'total' => $total)));
-                if (function_exists('DebMes')) DebMes("piper_tts: install_start OK", 'piper_tts');
-            }
-            echo json_encode(array('ok' => $ok));
             exit;
         }
 
@@ -849,15 +771,6 @@ SETUP;
 
         subscribeToEvent($this->name, 'SAY', '', 110);
         subscribeToEvent($this->name, 'SAYREPLY', '', 110);
-
-        // --- Директории ---
-        exec('mkdir -p /tmp/piper-tts 2>&1', $out, $rc);
-        if ($rc === 0) {
-            $log("install: created tmp dir (rc=$rc)");
-        } else {
-            $log("install: mkdir failed rc=$rc: " . implode(' ', $out));
-        }
-        exec('sudo chmod 01777 /tmp/piper-tts 2>/dev/null');
 
         // --- .htaccess для prepend.php ---
         $prependPath = ROOT . 'modules/piper_tts/prepend.php';
