@@ -788,13 +788,6 @@ SETUP;
             }
         }
 
-        // --- Удаляем orphaned записи из БД ---
-        SQLExec("DELETE FROM project_modules WHERE NAME='" . $this->name . "'");
-        @unlink(ROOT . 'cms/modules_installed/' . $this->name . '.installed');
-        if (file_exists(ROOT . 'cms/modules_installed/' . $this->name . '.files')) {
-          @unlink(ROOT . 'cms/modules_installed/' . $this->name . '.files');
-        }
-
         parent::install();
     }
 
