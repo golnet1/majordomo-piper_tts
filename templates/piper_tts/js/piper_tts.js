@@ -1,4 +1,5 @@
 (function () {
+  if (window.top !== window.self) return;
   var ws = null;
   var host = window.location.hostname;
   var port = window.PIPER_WS_PORT || 8001;

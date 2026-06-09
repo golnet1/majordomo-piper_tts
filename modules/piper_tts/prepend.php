@@ -2,7 +2,7 @@
 if (PHP_SAPI === 'cli') return;
 if (!isset($_SERVER['REQUEST_URI'])) return;
 $uri = $_SERVER['REQUEST_URI'];
-if (preg_match('#/(admin|popup/|menu\.html)#', $uri)) return;
+if (preg_match('#/(admin|popup/)#', $uri)) return;
 if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') return;
 
 ob_start(function ($buffer) {
