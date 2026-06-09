@@ -51,14 +51,16 @@ class piper_tts extends module
     function getConfig()
     {
         parent::getConfig();
-        if (!isset($this->config['PIPER_BIN'])) {
+        if (!isset($this->config['PIPER_BIN']) || trim($this->config['PIPER_BIN']) === '') {
             $this->config['PIPER_BIN'] = '/usr/local/bin/piper';
         }
-        if (!isset($this->config['MODELS_DIR'])) {
+        if (!isset($this->config['MODELS_DIR']) || trim($this->config['MODELS_DIR']) === '') {
             $this->config['MODELS_DIR'] = '/opt/piper/voices';
         }
         if (!isset($this->config['MODEL'])) {
-            $this->config['MODEL'] = '/opt/piper/voices/ru_RU-irina-medium/ru_RU-irina-medium.onnx';
+            $this->config['MODEL'] = $this->isRemoteMode()
+                ? 'ru_RU-irina-medium'
+                : '/opt/piper/voices/ru_RU-irina-medium/ru_RU-irina-medium.onnx';
         }
         if (!isset($this->config['LENGTH_SCALE'])) {
             $this->config['LENGTH_SCALE'] = '0.95';
@@ -103,6 +105,44 @@ class piper_tts extends module
         $this->result = $p->result;
     }
 
+    private function isRemoteMode()
+    {
+        $val = trim($this->config['PIPER_BIN']);
+        if ($val === '') return false;
+        if ($val[0] === '/' || $val[0] === '.' || strpos($val, '\\') !== false) return false;
+        if (!preg_match('/[.:\d]/', $val)) return false;
+        return true;
+    }
+
+    private function getRemoteAddr()
+    {
+        $addr = $this->config['PIPER_BIN'];
+        if (strpos($addr, ':') === false) {
+            $addr .= ':5000';
+        }
+        return $addr;
+    }
+
+    private function fetchRemoteVoices()
+    {
+        $addr = $this->getRemoteAddr();
+        $url = "http://$addr/voices";
+        $json = @file_get_contents($url);
+        if (!$json) return array();
+        $data = json_decode($json, true);
+        if (!$data) return array();
+        $models = array();
+        $current = $this->config['MODEL'];
+        foreach ($data as $name => $info) {
+            $models[] = array(
+                'VALUE' => $name,
+                'TITLE' => $name,
+                'SELECTED' => $name === $current ? 'selected' : '',
+            );
+        }
+        return $models;
+    }
+
     private function scanModels($dir)
     {
         $models = array();
@@ -124,26 +164,39 @@ class piper_tts extends module
 
     private function getAvailableModels()
     {
-        $voices = array('irina', 'ruslan', 'denis', 'dmitri');
-        $qualities = array('medium');
         $dir = $this->config['MODELS_DIR'];
         $available = array();
 
-        foreach ($voices as $voice) {
-            foreach ($qualities as $quality) {
-                $modelDir = $dir . '/ru_RU-' . $voice . '-' . $quality;
-                $modelFile = $modelDir . '/ru_RU-' . $voice . '-' . $quality . '.onnx';
-                $configFile = $modelDir . '/ru_RU-' . $voice . '-' . $quality . '.onnx.json';
-                $installed = file_exists($modelFile) && file_exists($configFile);
-                $available[] = array(
-                    'VOICE' => $voice,
-                    'QUALITY' => $quality,
-                    'DIR' => $modelDir,
-                    'INSTALLED' => $installed ? '1' : '0',
-                );
-            }
+        $voices = array(
+            'irina'  => array('quality' => 'medium', 'repo' => 'rhasspy'),
+            'denis'  => array('quality' => 'medium', 'repo' => 'rhasspy'),
+            'dmitri' => array('quality' => 'medium', 'repo' => 'rhasspy'),
+            'ruslan' => array('quality' => 'medium', 'repo' => 'rhasspy'),
+            'luka'   => array('quality' => 'medium', 'repo' => 'luka'),
+        );
+
+        foreach ($voices as $voice => $info) {
+            $quality = $info['quality'];
+            $modelDir = $dir . '/ru_RU-' . $voice . '-' . $quality;
+            $modelFile = $modelDir . '/ru_RU-' . $voice . '-' . $quality . '.onnx';
+            $configFile = $modelDir . '/ru_RU-' . $voice . '-' . $quality . '.onnx.json';
+            $installed = file_exists($modelFile) && file_exists($configFile);
+            $available[] = array(
+                'VOICE' => $voice,
+                'QUALITY' => $quality,
+                'DIR' => $modelDir,
+                'INSTALLED' => $installed ? '1' : '0',
+            );
         }
         return $available;
+    }
+
+    private function getModelBaseUrl($voice, $quality)
+    {
+        if ($voice === 'luka') {
+            return 'https://huggingface.co/superkeka/piper-tts-luka/resolve/main/ru/ru_RU/luka/' . $quality;
+        }
+        return 'https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/' . $voice . '/' . $quality;
     }
 
     function admin(&$out)
@@ -165,17 +218,42 @@ class piper_tts extends module
         }
 
         if (gr('cmd') == 'check_piper_status') {
-            $marker = '/tmp/piper-tts-installing';
-            if (is_file($marker)) {
-                $status = 'installing';
-            } elseif (is_file('/usr/local/bin/piper')) {
-                $status = 'installed';
-            } else {
-                $status = 'not_installed';
-            }
             while (ob_get_level()) ob_end_clean();
             header('Content-Type: application/json');
-            echo json_encode(array('status' => $status));
+            $arch = trim((string)shell_exec('uname -m'));
+            $arch64 = in_array($arch, ['x86_64', 'amd64', 'aarch64']);
+            if ($this->isRemoteMode()) {
+                $addr = $this->getRemoteAddr();
+                $ch = curl_init("http://$addr/voices");
+                curl_setopt_array($ch, array(
+                    CURLOPT_TIMEOUT => 3,
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_FOLLOWLOCATION => false,
+                ));
+                curl_exec($ch);
+                $http = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+                $connect = ($http >= 200 && $http < 300) ? 'connected' : 'not_connected';
+            } else {
+                $connect = is_file('/usr/local/bin/piper') ? 'connected' : 'not_connected';
+            }
+            $marker = '/tmp/piper-tts-installing';
+            if (is_file($marker)) {
+                $install = 'installing';
+            } elseif (is_file('/usr/local/bin/piper')) {
+                $install = 'installed';
+            } else {
+                $install = 'not_installed';
+            }
+            echo json_encode(array('connect' => $connect, 'install' => $install, 'arch64' => $arch64));
+            exit;
+        }
+
+        if (gr('cmd') == 'install_piper') {
+            if (function_exists('DebMes')) DebMes("piper_tts: install_piper called", 'piper_tts');
+            $this->runPiperInstall();
+            header('Content-Type: application/json');
+            echo json_encode(array('ok' => true));
             exit;
         }
 
@@ -189,8 +267,10 @@ class piper_tts extends module
             $modelDir = $this->config['MODELS_DIR'] . '/ru_RU-' . $voice . '-' . $quality;
             $pf = sys_get_temp_dir() . '/piper_progress_' . $voice;
             @unlink($pf);
+            $parentDir = dirname($modelDir);
+            exec('chown -R www-data:www-data ' . escapeshellarg($parentDir) . ' 2>/dev/null');
             if (!is_dir($modelDir)) mkdir($modelDir, 0755, true);
-            $baseUrl = 'https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/' . $voice . '/' . $quality;
+            $baseUrl = $this->getModelBaseUrl($voice, $quality);
             $files = array(
                 'ru_RU-' . $voice . '-' . $quality . '.onnx',
                 'ru_RU-' . $voice . '-' . $quality . '.onnx.json',
@@ -229,6 +309,7 @@ class piper_tts extends module
                     $ok = false; break;
                 }
             }
+            exec('chown -R www-data:www-data ' . escapeshellarg($modelDir) . ' 2>/dev/null');
             if (!$ok) {
                 exec('rm -rf ' . escapeshellarg($modelDir));
                 @file_put_contents($pf, json_encode(array('percent' => -1, 'error' => 'download failed')));
@@ -246,8 +327,10 @@ class piper_tts extends module
             $voice = gr('voice');
             $quality = gr('quality');
             $modelDir = $this->config['MODELS_DIR'] . '/ru_RU-' . $voice . '-' . $quality;
+            $parentDir = dirname($modelDir);
+            exec('chown -R www-data:www-data ' . escapeshellarg($parentDir) . ' 2>/dev/null');
             if (!is_dir($modelDir)) mkdir($modelDir, 0755, true);
-            $baseUrl = 'https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/' . $voice . '/' . $quality;
+            $baseUrl = $this->getModelBaseUrl($voice, $quality);
             $files = array(
                 'ru_RU-' . $voice . '-' . $quality . '.onnx',
                 'ru_RU-' . $voice . '-' . $quality . '.onnx.json',
@@ -318,6 +401,7 @@ class piper_tts extends module
                 }
                 $cumBytes += filesize($dest);
             }
+            exec('chown -R www-data:www-data ' . escapeshellarg($modelDir) . ' 2>/dev/null');
             if (!$ok) {
                 exec('rm -rf ' . escapeshellarg($modelDir));
                 echo '<p style="color:red">' . LANG_PIPER_TTS_DOWNLOAD_ERROR . '</p>';
@@ -355,28 +439,78 @@ class piper_tts extends module
             exit;
         }
 
+        $isRemote = $this->isRemoteMode();
+        $out['IS_REMOTE'] = $isRemote ? '1' : '';
         $out['PIPER_BIN'] = $this->config['PIPER_BIN'];
-        $out['MODELS_DIR'] = $this->config['MODELS_DIR'];
-        $out['MODELS'] = $this->scanModels($this->config['MODELS_DIR']);
-        $out['AVAILABLE_MODELS'] = $this->getAvailableModels();
+
+        if ($isRemote) {
+            $model = $this->config['MODEL'];
+            if (strpos($model, '/') !== false) {
+                $base = basename($model, '.onnx');
+                $this->config['MODEL'] = $base;
+                $this->saveConfig();
+            }
+            $out['REMOTE_MODELS'] = $this->fetchRemoteVoices();
+        } else {
+            $out['MODELS_DIR'] = $this->config['MODELS_DIR'];
+            $out['MODELS'] = $this->scanModels($this->config['MODELS_DIR']);
+            $out['AVAILABLE_MODELS'] = $this->getAvailableModels();
+        }
+
         $out['LENGTH_SCALE'] = $this->config['LENGTH_SCALE'];
         $out['SENTENCE_SILENCE'] = $this->config['SENTENCE_SILENCE'];
         $out['USE_CACHE'] = $this->config['USE_CACHE'] ? 'checked' : '';
         $out['CACHE_DIR'] = $this->config['CACHE_DIR'];
         $out['CACHE_CLEANUP'] = $this->config['CACHE_CLEANUP'] ? 'checked' : '';
         $out['WS_PORT'] = $this->config['WS_PORT'];
-        $marker = '/tmp/piper-tts-installing';
-        if (is_file($marker)) {
-            $out['PIPER_STATUS'] = '2';
-        } elseif (is_file('/usr/local/bin/piper')) {
-            $out['PIPER_STATUS'] = '1';
+
+        $arch = trim((string)shell_exec('uname -m'));
+        $arch64 = in_array($arch, ['x86_64', 'amd64', 'aarch64']);
+        $out['ARCH_64'] = $arch64 ? '1' : '';
+
+        if ($isRemote) {
+            $addr = $this->getRemoteAddr();
+            $ch = curl_init("http://$addr/voices");
+            curl_setopt_array($ch, array(
+                CURLOPT_TIMEOUT => 3,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => false,
+            ));
+            curl_exec($ch);
+            $http = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            $out['CONNECT_STATUS'] = ($http >= 200 && $http < 300) ? '1' : '0';
         } else {
-            $out['PIPER_STATUS'] = '0';
+            $out['CONNECT_STATUS'] = is_file('/usr/local/bin/piper') ? '1' : '0';
         }
 
+        $marker = '/tmp/piper-tts-installing';
+        if (is_file($marker)) {
+            $out['INSTALL_STATUS'] = '2';
+        } elseif (is_file('/usr/local/bin/piper')) {
+            $out['INSTALL_STATUS'] = '1';
+        } else {
+            $out['INSTALL_STATUS'] = '0';
+        }
+
+        $tab = gr('tab');
+        if (!$tab) $tab = 'settings';
+        $out['TAB'] = $tab;
+        $out['TAB_SETTINGS'] = ($tab == 'settings') ? '1' : '0';
+        $out['TAB_MODELS'] = ($tab == 'models') ? '1' : '0';
+        $out['TAB_HELP'] = ($tab == 'help') ? '1' : '0';
+        $out['VERSION'] = '1.0.3';
+
         if ($this->view_mode == 'update_settings') {
-            $this->config['PIPER_BIN'] = gr('piper_bin', $this->config['PIPER_BIN']);
-            $this->config['MODELS_DIR'] = gr('models_dir', $this->config['MODELS_DIR']);
+            $piperBin = gr('piper_bin', $this->config['PIPER_BIN']);
+            $this->config['PIPER_BIN'] = trim($piperBin) !== '' ? $piperBin : '/usr/local/bin/piper';
+            $isRemote = $this->isRemoteMode();
+            if (!$isRemote) {
+                $this->config['MODELS_DIR'] = gr('models_dir', $this->config['MODELS_DIR']);
+                if (trim($this->config['MODELS_DIR']) === '') {
+                    $this->config['MODELS_DIR'] = '/opt/piper/voices';
+                }
+            }
             $this->config['MODEL'] = gr('model', $this->config['MODEL']);
             $this->config['LENGTH_SCALE'] = gr('length_scale', $this->config['LENGTH_SCALE']);
             $this->config['SENTENCE_SILENCE'] = gr('sentence_silence', $this->config['SENTENCE_SILENCE']);
@@ -385,7 +519,7 @@ class piper_tts extends module
             $this->config['CACHE_CLEANUP'] = gr('cache_cleanup', 0) ? 1 : 0;
             $this->config['WS_PORT'] = gr('ws_port', $this->config['WS_PORT']);
             $this->saveConfig();
-            $this->redirect('?action=piper_tts');
+            $this->redirect('?action=piper_tts&tab=' . $tab);
         }
     }
 
@@ -394,35 +528,208 @@ class piper_tts extends module
         $this->admin($out);
     }
 
+    private function pluralize($n, $forms)
+    {
+        $n = abs((int)$n) % 100;
+        $n1 = $n % 10;
+        if ($n > 10 && $n < 20) return $forms[2];
+        if ($n1 > 1 && $n1 < 5) return $forms[1];
+        if ($n1 == 1) return $forms[0];
+        return $forms[2];
+    }
+
+    private function numberToText($n)
+    {
+        $n = (int)$n;
+        if ($n === 0) return 'ноль';
+        $units = array('', 'один', 'два', 'три', 'четыре', 'пять', 'шесть', 'семь', 'восемь', 'девять');
+        $unitsFem = array('', 'одна', 'две', 'три', 'четыре', 'пять', 'шесть', 'семь', 'восемь', 'девять');
+        $teens = array('десять', 'одиннадцать', 'двенадцать', 'тринадцать', 'четырнадцать', 'пятнадцать', 'шестнадцать', 'семнадцать', 'восемнадцать', 'девятнадцать');
+        $tens = array('', '', 'двадцать', 'тридцать', 'сорок', 'пятьдесят', 'шестьдесят', 'семьдесят', 'восемьдесят', 'девяносто');
+        $hundreds = array('', 'сто', 'двести', 'триста', 'четыреста', 'пятьсот', 'шестьсот', 'семьсот', 'восемьсот', 'девятьсот');
+        $result = '';
+        if ($n >= 1000) {
+            $th = (int)($n / 1000);
+            $result .= $unitsFem[$th] . ' тысяча ';
+            $n %= 1000;
+        }
+        if ($n >= 100) {
+            $result .= $hundreds[(int)($n / 100)] . ' ';
+            $n %= 100;
+        }
+        if ($n >= 20) {
+            $result .= $tens[(int)($n / 10)] . ' ';
+            $n %= 10;
+        } elseif ($n >= 10) {
+            $result .= $teens[$n - 10] . ' ';
+            $n = 0;
+        }
+        if ($n > 0) {
+            $result .= $units[$n] . ' ';
+        }
+        return trim($result);
+    }
+
+    private function expandDecimal($str)
+    {
+        if (!preg_match('/^(\d+)[.,](\d+)$/', $str, $m)) {
+            return $str;
+        }
+        $whole = (int)$m[1];
+        $frac = $m[2];
+        $fracInt = (int)$frac;
+        if ($fracInt === 0) {
+            return $this->numberToText($whole);
+        }
+        $wholeText = $this->numberToText($whole);
+        if (strlen($frac) === 1 && $fracInt === 5) {
+            return $wholeText . ' с половиной';
+        }
+        if (strlen($frac) === 1) {
+            $fracText = $this->numberToText($fracInt);
+            $fracWord = $this->pluralize($fracInt, array('десятая', 'десятых', 'десятых'));
+            return $wholeText . ' целых ' . $fracText . ' ' . $fracWord;
+        }
+        return $wholeText . ' целых ' . $this->numberToText($fracInt);
+    }
+
+    private function preprocessText($text)
+    {
+        $text = preg_replace_callback('/(\d+(?:[.,]\d+)?)\s*°\s*C/ui', function($m) {
+            $num = str_replace(',', '.', $m[1]);
+            if (strpos($num, '.') !== false) {
+                $whole = (int)$num;
+                return $this->expandDecimal($num) . ' ' . $this->pluralize($whole, array('градус', 'градуса', 'градусов'));
+            }
+            return $m[1] . ' ' . $this->pluralize((int)$num, array('градус', 'градуса', 'градусов'));
+        }, $text);
+
+        $text = preg_replace_callback('/(\d+(?:[.,]\d+)?)\s*%/u', function($m) {
+            $num = str_replace(',', '.', $m[1]);
+            if (strpos($num, '.') !== false) {
+                $whole = (int)$num;
+                return $this->expandDecimal($num) . ' ' . $this->pluralize($whole, array('процент', 'процента', 'процентов'));
+            }
+            return $m[1] . ' ' . $this->pluralize((int)$num, array('процент', 'процента', 'процентов'));
+        }, $text);
+
+        $text = preg_replace_callback('/(\d+(?:[.,]\d+)?)\s*мм\s+рт\.?\s*ст\.?/ui', function($m) {
+            $num = str_replace(',', '.', $m[1]);
+            if (strpos($num, '.') !== false) {
+                $whole = (int)$num;
+                return $this->expandDecimal($num) . ' ' . $this->pluralize($whole, array('миллиметр', 'миллиметра', 'миллиметров')) . ' ртутного столба';
+            }
+            return $m[1] . ' ' . $this->pluralize((int)$num, array('миллиметр', 'миллиметра', 'миллиметров')) . ' ртутного столба';
+        }, $text);
+
+        $text = preg_replace_callback('/(\d+(?:[.,]\d+)?)\s*мм\b/u', function($m) {
+            $num = str_replace(',', '.', $m[1]);
+            if (strpos($num, '.') !== false) {
+                $whole = (int)$num;
+                return $this->expandDecimal($num) . ' ' . $this->pluralize($whole, array('миллиметр', 'миллиметра', 'миллиметров'));
+            }
+            return $m[1] . ' ' . $this->pluralize((int)$num, array('миллиметр', 'миллиметра', 'миллиметров'));
+        }, $text);
+
+        $text = preg_replace_callback('/\b(\d+)[.,](\d+)\b/u', function($m) {
+            return $this->expandDecimal($m[1] . '.' . $m[2]);
+        }, $text);
+
+        $tzPos = array(
+            0 => 'гринвичу', 1 => 'центральноевропейскому', 2 => 'калининграду',
+            3 => 'москве', 4 => 'самаре', 5 => 'екатеринбургу',
+            6 => 'омску', 7 => 'красноярску', 8 => 'иркутску',
+            9 => 'якутску', 10 => 'владивостоку', 11 => 'магадану', 12 => 'камчатке',
+        );
+        $tzNeg = array(
+            1 => 'азорам', 2 => 'бразилии', 3 => 'аргентине',
+            4 => 'нью-йорку', 5 => 'чикаго', 6 => 'денверу',
+            7 => 'лос-анджелесу', 8 => 'анкориджу', 9 => 'гавайям',
+            10 => 'острову пасхи',
+        );
+        $text = preg_replace_callback('/\bUTC([+-]\d{1,2})\b/u', function($m) use ($tzPos, $tzNeg) {
+            $offset = (int)$m[1];
+            if ($offset >= 0 && isset($tzPos[$offset])) return 'по ' . $tzPos[$offset];
+            if ($offset < 0 && isset($tzNeg[-$offset])) return 'по ' . $tzNeg[-$offset];
+            return 'UTC' . $m[1];
+        }, $text);
+        $text = preg_replace('/\bUTC(?![-+])/u', 'по гринвичу', $text);
+        $text = preg_replace('/\bGMT\b/u', 'по гринвичу', $text);
+        $text = preg_replace('/\bMSK\b/u', 'по москве', $text);
+        $text = preg_replace('/\bEDT\b/u', 'по нью-йорку', $text);
+        $text = preg_replace('/\bEST\b/u', 'по нью-йорку', $text);
+        $text = preg_replace('/\bPDT\b/u', 'по лос-анджелесу', $text);
+        $text = preg_replace('/\bPST\b/u', 'по лос-анджелесу', $text);
+        $text = preg_replace('/\bCDT\b/u', 'по чикаго', $text);
+        $text = preg_replace('/\bCST\b/u', 'по чикаго', $text);
+        $text = preg_replace('/\bMDT\b/u', 'по денверу', $text);
+        $text = preg_replace('/\bMST\b/u', 'по денверу', $text);
+        $text = preg_replace('/\bAKDT\b/u', 'по анкориджу', $text);
+        $text = preg_replace('/\bAKST\b/u', 'по анкориджу', $text);
+        $text = preg_replace('/\bHADT\b/u', 'по гавайям', $text);
+        $text = preg_replace('/\bHAST\b/u', 'по гавайям', $text);
+        $text = preg_replace('/\bCET\b/u', 'по центральноевропейскому', $text);
+        $text = preg_replace('/\bCEST\b/u', 'по центральноевропейскому', $text);
+        $text = preg_replace('/\bEET\b/u', 'по восточноевропейскому', $text);
+        $text = preg_replace('/\bEEST\b/u', 'по восточноевропейскому', $text);
+        $text = preg_replace('/\bBST\b/u', 'по лондону', $text);
+        $text = preg_replace('/\bIST\b/u', 'по индии', $text);
+        $text = preg_replace('/\bJST\b/u', 'по токио', $text);
+        $text = preg_replace('/\bKST\b/u', 'по сеулу', $text);
+        $text = preg_replace('/\bAWST\b/u', 'по перту', $text);
+        $text = preg_replace('/\bACST\b/u', 'по дарвину', $text);
+        $text = preg_replace('/\bAEST\b/u', 'по сиднею', $text);
+
+        return $text;
+    }
+
     private function synthesizeToFile($message, $path)
     {
-        $clean = preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $message);
+        $clean = $this->preprocessText($message);
+        $clean = preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $clean);
         $clean = preg_replace('/\s+/', ' ', $clean);
         $clean = trim($clean);
 
-        $script = '/usr/local/bin/mdm-piper-tts';
-        if (is_executable($script)) {
-            $model = $this->config['MODEL'];
-            $ls = $this->config['LENGTH_SCALE'];
-            $ss = $this->config['SENTENCE_SILENCE'];
-            $cmd = $script . ' ' . escapeshellarg($clean) . ' ' . escapeshellarg($path) .
-                ' ' . escapeshellarg($model) .
-                ' --length-scale ' . escapeshellarg($ls) .
-                ' --sentence-silence ' . escapeshellarg($ss);
+        if ($this->isRemoteMode()) {
+            $addr = $this->getRemoteAddr();
+            $url = "http://$addr/";
+            $payload = json_encode(array(
+                'text' => $clean,
+                'voice' => $this->config['MODEL'],
+                'length_scale' => (float)$this->config['LENGTH_SCALE'],
+                'noise_scale' => 0.667,
+                'noise_w' => 0.8,
+            ));
+            $cmd = 'curl -s -X POST -H "Content-Type: application/json" -d ' .
+                escapeshellarg($payload) . ' -o ' . escapeshellarg($path) . ' ' .
+                escapeshellarg($url);
+            exec($cmd . ' 2>&1', $out, $ret);
         } else {
-            $bin = $this->config['PIPER_BIN'];
-            $model = $this->config['MODEL'];
-            $ls = $this->config['LENGTH_SCALE'];
-            $ss = $this->config['SENTENCE_SILENCE'];
-            $cmd = 'printf %s ' . escapeshellarg($clean) . ' | ' .
-                escapeshellarg($bin) .
-                ' --model ' . escapeshellarg($model) .
-                ' --length-scale ' . escapeshellarg($ls) .
-                ' --sentence-silence ' . escapeshellarg($ss) .
-                ' --noise-scale 0.667 --noise-w 0.8' .
-                ' --output-file ' . escapeshellarg($path);
+            $script = '/usr/local/bin/mdm-piper-tts';
+            if (is_executable($script)) {
+                $model = $this->config['MODEL'];
+                $ls = $this->config['LENGTH_SCALE'];
+                $ss = $this->config['SENTENCE_SILENCE'];
+                $cmd = $script . ' ' . escapeshellarg($clean) . ' ' . escapeshellarg($path) .
+                    ' ' . escapeshellarg($model) .
+                    ' --length-scale ' . escapeshellarg($ls) .
+                    ' --sentence-silence ' . escapeshellarg($ss);
+            } else {
+                $bin = $this->config['PIPER_BIN'];
+                $model = $this->config['MODEL'];
+                $ls = $this->config['LENGTH_SCALE'];
+                $ss = $this->config['SENTENCE_SILENCE'];
+                $cmd = 'printf %s ' . escapeshellarg($clean) . ' | ' .
+                    escapeshellarg($bin) .
+                    ' --model ' . escapeshellarg($model) .
+                    ' --length-scale ' . escapeshellarg($ls) .
+                    ' --sentence-silence ' . escapeshellarg($ss) .
+                    ' --noise-scale 0.667 --noise-w 0.8' .
+                    ' --output-file ' . escapeshellarg($path);
+            }
+            exec($cmd . ' 2>&1', $out, $ret);
         }
-        exec($cmd . ' 2>&1', $out, $ret);
+
         if ($ret === 0 && file_exists($path)) {
             $tmpPath = $path . '.tmp';
             exec('ffmpeg -y -i ' . escapeshellarg($path) .
@@ -498,106 +805,14 @@ class piper_tts extends module
         }
     }
 
-    function install($data = '')
+    private function runPiperInstall()
     {
-        $log = function ($msg) {
-            if (function_exists('DebMes')) DebMes("piper_tts: $msg", 'piper_tts');
-        };
-
-        // --- Проверка архитектуры ---
+        $setupScript = '/tmp/piper_install.sh';
+        $setupLog = '/tmp/piper_install.log';
+        $marker = '/tmp/piper-tts-installing';
         $arch = trim((string)shell_exec('uname -m'));
-        if (!in_array($arch, ['x86_64', 'amd64', 'aarch64'])) {
-            $log("install: unsupported architecture '$arch' (x86_64/amd64/aarch64 required) — module not installed");
-            return;
-        }
-        $log("install: arch=$arch OK");
-
-        subscribeToEvent($this->name, 'SAY', '', 110);
-        subscribeToEvent($this->name, 'SAYREPLY', '', 110);
-
-        // --- Директории (через sudo — www-data не имеет прав на /opt) ---
-        exec('sudo mkdir -p /opt/piper/voices /tmp/piper-tts 2>&1', $out, $rc);
-        if ($rc === 0) {
-            $log("install: created dirs (rc=$rc)");
-        } else {
-            $log("install: mkdir failed rc=$rc: " . implode(' ', $out));
-        }
-        exec('sudo chmod 01777 /tmp/piper-tts 2>/dev/null');
-        exec('sudo chown www-data:www-data /opt/piper/voices 2>/dev/null');
-        exec('sudo chmod -R a+rX /opt/piper/voices 2>/dev/null');
-
-        // --- Wrapper-скрипт ---
-        $wrapper = '/usr/local/bin/mdm-piper-tts';
-        if (!is_file($wrapper)) {
-            $content = <<<'WRAPPER'
-#!/usr/bin/env bash
-set -euo pipefail
-PIPER_BIN="${PIPER_BIN:-/usr/local/bin/piper}"
-MODEL="${PIPER_MODEL:-/opt/piper/voices/ru_RU-irina-medium/ru_RU-irina-medium.onnx}"
-LENGTH_SCALE="${PIPER_LENGTH_SCALE:-1.0}"
-SENTENCE_SILENCE="${PIPER_SENTENCE_SILENCE:-0.15}"
-NOISE_SCALE="${PIPER_NOISE_SCALE:-0.667}"
-NOISE_W="${PIPER_NOISE_W:-0.8}"
-TEXT="${1:-}"; OUTPUT="${2:-}"
-if [ -z "$TEXT" ] || [ "$TEXT" = "-" ]; then TEXT="$(cat)"; fi
-if [ -z "$OUTPUT" ]; then echo "Usage: mdm-piper-tts <text> <output_wav> [model] [--flags...]" >&2; exit 1; fi
-[ -n "$TEXT" ] || exit 1
-if [ -n "${3:-}" ] && [ "${3:0:1}" != "-" ]; then MODEL="$3"; shift 3; else shift 2; fi
-EXTRA=()
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --length-scale) LENGTH_SCALE="$2"; shift 2 ;;
-    --sentence-silence) SENTENCE_SILENCE="$2"; shift 2 ;;
-    --noise-scale) NOISE_SCALE="$2"; shift 2 ;;
-    --noise-w) NOISE_W="$2"; shift 2 ;;
-    *) EXTRA+=("$1"); shift ;;
-  esac
-done
-mkdir -p "$(dirname "$OUTPUT")"
-printf '%s' "$TEXT" | "$PIPER_BIN" --model "$MODEL" --length-scale "$LENGTH_SCALE" --sentence-silence "$SENTENCE_SILENCE" --noise-scale "$NOISE_SCALE" --noise-w "$NOISE_W" "${EXTRA[@]}" --output-file "$OUTPUT" 2>/dev/null
-if command -v ffmpeg >/dev/null 2>&1; then
-  TMP="${OUTPUT}.tmp"
-  ffmpeg -y -i "$OUTPUT" -af "loudnorm=I=-16:LRA=7:TP=-1.5" "$TMP" 2>/dev/null && mv "$TMP" "$OUTPUT" || rm -f "$TMP"
-fi
-WRAPPER;
-            if (@file_put_contents($wrapper, $content) !== false) {
-                @chmod($wrapper, 0755);
-                $log('install: created mdm-piper-tts');
-            } else {
-                @file_put_contents(ROOT . 'modules/piper_tts/mdm-piper-tts', $content);
-                @chmod(ROOT . 'modules/piper_tts/mdm-piper-tts', 0755);
-                $log('install: saved mdm-piper-tts to module dir (copy to /usr/local/bin/ as root)');
-            }
-        }
-
-        // --- .htaccess для prepend.php ---
-        $htaccess = ROOT . '.htaccess';
-        if (file_exists($htaccess)) {
-            $content = file_get_contents($htaccess);
-            $line = 'php_value auto_prepend_file ' . ROOT . 'modules/piper_tts/prepend.php';
-            if (strpos($content, 'piper_tts/prepend.php') === false) {
-                file_put_contents($htaccess, $line . "\n" . $content);
-                $log('install: added prepend to .htaccess');
-            }
-        }
-
-        // --- Удаляем orphaned записи из БД (остались после неполного uninstall) ---
-        SQLExec("DELETE FROM project_modules WHERE NAME='" . $this->name . "'");
-        @unlink(ROOT . 'cms/modules_installed/' . $this->name . '.installed');
-        if (file_exists(ROOT . 'cms/modules_installed/' . $this->name . '.files')) {
-          @unlink(ROOT . 'cms/modules_installed/' . $this->name . '.files');
-        }
-
-        parent::install();
-
-        // --- Установка Piper (в фоне) ---
-        if (!is_file('/usr/local/bin/piper')) {
-            $setupScript = '/tmp/piper_install.sh';
-            $setupLog = '/tmp/piper_install.log';
-            $marker = '/tmp/piper-tts-installing';
-        $arch = trim((string)shell_exec('uname -m'));
-            file_put_contents($marker, '1');
-            $scriptContent = <<<SETUP
+        file_put_contents($marker, '1');
+        $scriptContent = <<<SETUP
 #!/usr/bin/env bash
 set -euo pipefail
 exec > $setupLog 2>&1
@@ -611,7 +826,7 @@ if [ ! -d /opt/piper/piper1-gpl ]; then
   git clone https://github.com/OHF-voice/piper1-gpl.git /opt/piper/piper1-gpl
 fi
 echo "[PiperSetup] Fixing ownership..."
-chown -R www-data:www-data /opt/piper/piper1-gpl
+  chown -R www-data:www-data /opt/piper
 cd /opt/piper/piper1-gpl
 echo "[PiperSetup] Creating venv..."
 sudo -u www-data python3 -m venv .venv
@@ -620,37 +835,60 @@ sudo -u www-data .venv/bin/pip install --upgrade pip -q
 sudo -u www-data .venv/bin/pip install .
 echo "[PiperSetup] Linking piper..."
 ln -sf /opt/piper/piper1-gpl/.venv/bin/piper /usr/local/bin/piper
-echo "[PiperSetup] Done"
-rm -f /tmp/piper-tts-installing
-SETUP;
-            file_put_contents($setupScript, $scriptContent);
-            chmod($setupScript, 0755);
-            exec('nohup sudo bash ' . escapeshellarg($setupScript) . ' < /dev/null > /dev/null 2>&1 &');
-            $log("install: piper setup started in background — see $setupLog");
-        } else {
-            $log('install: piper OK');
-        }
-        if (!is_dir('/opt/piper/voices/ru_RU-irina-medium') || !is_file('/opt/piper/voices/ru_RU-irina-medium/ru_RU-irina-medium.onnx')) {
-            $log('install: downloading irina-medium model in background');
-            $dler = '/tmp/piper_dl_irina.sh';
-            file_put_contents($dler, <<<DL
-#!/usr/bin/env bash
-exec >> /tmp/piper_dl_irina.log 2>&1
-echo "[ModelDL] start \$(date)"
+echo "[PiperSetup] Downloading default voice irina-medium..."
+mkdir -p /opt/piper/voices
 mkdir -p /opt/piper/voices/ru_RU-irina-medium
 curl -fSL -o /opt/piper/voices/ru_RU-irina-medium/ru_RU-irina-medium.onnx \
   "https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx"
 curl -fSL -o /opt/piper/voices/ru_RU-irina-medium/ru_RU-irina-medium.onnx.json \
   "https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx.json"
-chown -R www-data:www-data /opt/piper/voices/ru_RU-irina-medium
-echo "[ModelDL] done \$(date)"
-DL
-            );
-            chmod($dler, 0755);
-            exec('nohup sudo bash ' . escapeshellarg($dler) . ' < /dev/null > /dev/null 2>&1 &');
+chown -R www-data:www-data /opt/piper/voices/ru_RU-irina-medium 2>/dev/null
+  chown -R www-data:www-data /opt/piper/voices 2>/dev/null
+echo "[PiperSetup] Done"
+rm -f /tmp/piper-tts-installing
+SETUP;
+        file_put_contents($setupScript, $scriptContent);
+        chmod($setupScript, 0755);
+        exec('nohup sudo bash ' . escapeshellarg($setupScript) . ' < /dev/null > /dev/null 2>&1 &');
+    }
+
+    function install($data = '')
+    {
+        $log = function ($msg) {
+            if (function_exists('DebMes')) DebMes("piper_tts: $msg", 'piper_tts');
+        };
+
+        subscribeToEvent($this->name, 'SAY', '', 110);
+        subscribeToEvent($this->name, 'SAYREPLY', '', 110);
+
+        // --- Директории ---
+        exec('mkdir -p /tmp/piper-tts 2>&1', $out, $rc);
+        if ($rc === 0) {
+            $log("install: created tmp dir (rc=$rc)");
         } else {
-            $log('install: irina-medium model already present');
+            $log("install: mkdir failed rc=$rc: " . implode(' ', $out));
         }
+        exec('sudo chmod 01777 /tmp/piper-tts 2>/dev/null');
+
+        // --- .htaccess для prepend.php ---
+        $htaccess = ROOT . '.htaccess';
+        if (file_exists($htaccess)) {
+            $content = file_get_contents($htaccess);
+            $line = 'php_value auto_prepend_file ' . ROOT . 'modules/piper_tts/prepend.php';
+            if (strpos($content, 'piper_tts/prepend.php') === false) {
+                file_put_contents($htaccess, $line . "\n" . $content);
+                $log('install: added prepend to .htaccess');
+            }
+        }
+
+        // --- Удаляем orphaned записи из БД ---
+        SQLExec("DELETE FROM project_modules WHERE NAME='" . $this->name . "'");
+        @unlink(ROOT . 'cms/modules_installed/' . $this->name . '.installed');
+        if (file_exists(ROOT . 'cms/modules_installed/' . $this->name . '.files')) {
+          @unlink(ROOT . 'cms/modules_installed/' . $this->name . '.files');
+        }
+
+        parent::install();
     }
 
     function uninstall()

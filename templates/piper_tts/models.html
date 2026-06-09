@@ -1,0 +1,43 @@
+<script>
+function filterModels(){
+  var fv=document.getElementById('filter_voice').value.toLowerCase();
+  var fq=document.getElementById('filter_quality').value.toLowerCase();
+  var fs=document.getElementById('filter_status').value;
+  var rows=document.querySelectorAll('#model_table .model_row');
+  for(var i=0;i<rows.length;i++){
+    var voice=rows[i].cells[0].textContent.toLowerCase();
+    var quality=rows[i].cells[1].textContent.toLowerCase();
+    var show=true;
+    if(fv&&voice.indexOf(fv)==-1)show=false;
+    if(fq&&quality.indexOf(fq)==-1)show=false;
+    if(fs&&rows[i].getAttribute('data-installed')!=fs)show=false;
+    rows[i].style.display=show?'':'none';
+  }
+}
+</script>
+<fieldset>
+  <legend><#LANG_PIPER_TTS_MODEL_MANAGEMENT#></legend>
+  <table width="100%" id="model_table">
+    <tr><th align="left"><#LANG_PIPER_TTS_VOICE#></th><th><#LANG_PIPER_TTS_QUALITY#></th><th><#LANG_PIPER_TTS_STATUS#></th><th></th></tr>
+    <tr>
+     <td><input type="text" id="filter_voice" placeholder="<#LANG_PIPER_TTS_FILTER#>" style="width:90%;font-size:12px" oninput="filterModels()"></td>
+     <td><input type="text" id="filter_quality" placeholder="<#LANG_PIPER_TTS_FILTER#>" style="width:90%;font-size:12px" oninput="filterModels()"></td>
+     <td><select id="filter_status" style="width:90%;font-size:12px" onchange="filterModels()"><option value=""><#LANG_PIPER_TTS_ALL#></option><option value="1"><#LANG_PIPER_TTS_INSTALLED_TRUE#></option><option value="0"><#LANG_PIPER_TTS_INSTALLED_FALSE#></option></select></td>
+     <td></td>
+    </tr>
+[#begin AVAILABLE_MODELS#]
+    <tr class="model_row" data-installed="[#INSTALLED#]">
+     <td>[#VOICE#]</td>
+     <td>[#QUALITY#]</td>
+     <td>[#if INSTALLED="1"#]<#LANG_PIPER_TTS_INSTALLED_TRUE#>[#else#]<#LANG_PIPER_TTS_INSTALLED_FALSE#>[#endif#]</td>
+     <td>
+[#if INSTALLED="1"#]
+       <a href="?action=piper_tts&cmd=delete_model&tab=models&voice=[#VOICE#]&quality=[#QUALITY#]" class="btn btn-danger" onclick="return confirm('<#LANG_PIPER_TTS_CONFIRM_DELETE#>'.replace('%s','[#VOICE#]').replace('%s','[#QUALITY#]'))"><#LANG_PIPER_TTS_DELETE#></a>
+[#else#]
+       <a href="?action=piper_tts&cmd=install_model&tab=models&voice=[#VOICE#]&quality=[#QUALITY#]" class="btn btn-success" onclick="return confirm('<#LANG_PIPER_TTS_CONFIRM_INSTALL#>'.replace('%s','[#VOICE#]').replace('%s','[#QUALITY#]'))"><#LANG_PIPER_TTS_INSTALL#></a>
+[#endif#]
+     </td>
+    </tr>
+[#end AVAILABLE_MODELS#]
+  </table>
+</fieldset>

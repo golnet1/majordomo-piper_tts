@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PIPER_BIN="${PIPER_BIN:-/usr/local/bin/piper}"
+PRIMARY_MODEL="/home/pi/piper-voices/ru_RU-ruslan-medium/ru_RU-ruslan-medium.onnx"
+FALLBACK_MODEL="/opt/piper/voices/ru_RU-irina-medium/ru_RU-irina-medium.onnx"
+MODEL="${PIPER_MODEL:-}"
+LENGTH_SCALE="${PIPER_LENGTH_SCALE:-0.95}"     # lower=faster, higher=slower
+SENTENCE_SILENCE="${PIPER_SENTENCE_SILENCE:-0.15}"
+VOL_PULSE="${PIPER_VOLUME_PULSE:-52000}"       # 0..65536 for paplay
+OUT_WAV="$(mktemp /tmp/piper-tts.XXXXXX.wav)"
+LOG_FILE="/tmp/mdm-piper-tts.log"
+
+TEXT="${*:-}"
+if [ -z "$TEXT" ] && [ ! -t 0 ]; then
+  TEXT="$(cat)"
+fi
+[ -n "$TEXT" ] || exit 0
+
+if [ -z "$MODEL" ]; then
+  if [ -f "$PRIMARY_MODEL" ] && [ -f "${PRIMARY_MODEL}.json" ]; then
+    MODEL="$PRIMARY_MODEL"
+  else
+    MODEL="$FALLBACK_MODEL"
+  fi
+fi
+
+if [ ! -x "$PIPER_BIN" ]; then
+  echo "piper binary not executable: $PIPER_BIN" >> "$LOG_FILE"
+  exit 1
+fi
+if [ ! -f "$MODEL" ] || [ ! -f "${MODEL}.json" ]; then
+  echo "model files missing: $MODEL" >> "$LOG_FILE"
+  exit 1
+fi
+
+cleanup() { rm -f "$OUT_WAV"; }
+trap cleanup EXIT
+
+printf '%s' "$TEXT" | "$PIPER_BIN" \
+  --model "$MODEL" \
+  --length_scale "$LENGTH_SCALE" \
+  --sentence_silence "$SENTENCE_SILENCE" \
+  --output_file "$OUT_WAV" >> "$LOG_FILE" 2>&1
+
+if command -v paplay >/dev/null 2>&1; then
+  paplay --volume="$VOL_PULSE" "$OUT_WAV" >> "$LOG_FILE" 2>&1 && exit 0
+fi
+
+if command -v aplay >/dev/null 2>&1; then
+  aplay -q "$OUT_WAV" >> "$LOG_FILE" 2>&1 && exit 0
+fi
+
+echo "No playback backend succeeded" >> "$LOG_FILE"
+exit 1

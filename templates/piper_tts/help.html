@@ -1,0 +1,368 @@
+<h4>Описание настроек</h4>
+<div class="panel-group" id="pt_help_accordion">
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_accordion" href="#pt_help_common">Общее</a>
+        </div>
+        <div class="panel-body collapse in" id="pt_help_common">
+            <p><strong>Piper TTS</strong> — модуль синтеза русской речи для MajorDoMo. Использует Piper (движок TTS на основе нейросетей) для преобразования текста в речь. Поддерживает локальный запуск Piper на сервере и подключение к удалённому HTTP API Piper.</p>
+            <p>В заголовке модуля отображаются цветные индикаторы состояния:</p>
+            <ul>
+                <li><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#28a745;margin-right:3px;vertical-align:middle;"></span> <strong>зелёный</strong> — компонент работает;</li>
+                <li><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#dc3545;margin-right:3px;vertical-align:middle;"></span> <strong>красный</strong> — компонент недоступен.</li>
+            </ul>
+            <ul>
+                <li><strong>Подключен / Не подключен</strong> — в локальном режиме проверяет наличие <code>/usr/local/bin/piper</code>; в удалённом — доступность HTTP API по указанному адресу.</li>
+                <li><strong>Установлено / Установка / Не установлено</strong> — статус Piper на сервере. Отображается только на 64-битных системах в локальном режиме.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_accordion" href="#pt_help_piper">Piper (локальный путь или IP:порт)</a>
+        </div>
+        <div class="panel-body collapse" id="pt_help_piper">
+            <dl class="dl-horizontal">
+                <dt>Назначение</dt>
+                <dd>Указывает, как модуль будет запускать Piper: локально через бинарник или через HTTP API на удалённом сервере.</dd>
+
+                <dt>Локальный режим</dt>
+                <dd>Введите путь к исполняемому файлу Piper, например <code>/usr/local/bin/piper</code>. Если поле оставить пустым, подставится <code>/usr/local/bin/piper</code> автоматически.</dd>
+
+                <dt>Удалённый режим</dt>
+                <dd>Введите IP-адрес или hostname сервера с HTTP API Piper, например <code>192.168.1.100:5000</code> или <code>piper.local</code>. Если порт не указан, по умолчанию используется <code>5000</code>. В этом режиме модуль отправляет POST-запросы на <code>http://адрес:порт/</code> с параметрами <code>text</code>, <code>voice</code> и <code>length_scale</code>.</dd>
+
+                <dt>Как определяется режим</dt>
+                <dd>Если значение поля содержит <code>/</code>, <code>.</code> или <code>\</code> — считается локальным путём. Если содержит только цифры, точки и двоеточия (похоже на IP:port) — считается удалённым адресом.</dd>
+
+                <dt>Что меняется в интерфейсе</dt>
+                <dd>В удалённом режиме скрываются поля «Директория моделей», «Управление моделями» и кнопка «Установить Piper», так как HTTP API Piper не поддерживает эти операции.</dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_accordion" href="#pt_help_models_dir">Директория моделей</a>
+        </div>
+        <div class="panel-body collapse" id="pt_help_models_dir">
+            <dl class="dl-horizontal">
+                <dt>Назначение</dt>
+                <dd>Путь к папке, где хранятся голосовые модели (<code>.onnx</code> и <code>.onnx.json</code>).</dd>
+
+                <dt>Значение по умолчанию</dt>
+                <dd>Если поле пустое — подставляется <code>/opt/piper/voices</code>.</dd>
+
+                <dt>Структура</dt>
+                <dd>Модели должны быть разложены по подкаталогам: <code>{models_dir}/ru_RU-{голос}-{качество}/ru_RU-{голос}-{качество}.onnx</code>. Например: <code>/opt/piper/voices/ru_RU-irina-medium/ru_RU-irina-medium.onnx</code>.</dd>
+
+                <dt>Примечание</dt>
+                <dd>Поле отображается только в локальном режиме. В удалённом режиме модели хранятся на удалённом сервере.</dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_accordion" href="#pt_help_model">Модель (.onnx)</a>
+        </div>
+        <div class="panel-body collapse" id="pt_help_model">
+            <dl class="dl-horizontal">
+                <dt>Назначение</dt>
+                <dd>Выбор голосовой модели для синтеза речи.</dd>
+
+                <dt>Локальный режим</dt>
+                <dd>Выпадающий список заполняется на основе файлов <code>.onnx</code>, найденных в «Директории моделей». Название модели отображается как <code>голос / качество</code>, значение — полный путь к <code>.onnx</code> файлу.</dd>
+
+                <dt>Удалённый режим</dt>
+                <dd>Список голосов загружается через HTTP API (<code>GET /voices</code>). Значение — имя модели (например <code>ru_RU-irina-medium</code>), которое передаётся в параметре <code>voice</code> при синтезе.</dd>
+
+                <dt>Рекомендуемая модель</dt>
+                <dd><strong>irina / medium</strong> — русский женский голос, хорошее качество при умеренном потреблении ресурсов (~200 МБ ОЗУ). Для слабых устройств — <strong>irina / low</strong>.</dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_accordion" href="#pt_help_speed">Скорость (Length Scale)</a>
+        </div>
+        <div class="panel-body collapse" id="pt_help_speed">
+            <dl class="dl-horizontal">
+                <dt>Назначение</dt>
+                <dd>Регулирует темп речи. Значение меньше 1.0 — быстрее, больше 1.0 — медленнее.</dd>
+
+                <dt>Диапазон</dt>
+                <dd>от <strong>0.50</strong> (очень быстро) до <strong>1.50</strong> (очень медленно). По умолчанию <strong>1.00</strong>.</dd>
+
+                <dt>Примеры</dt>
+                <dd><code>0.80</code> — ускоренное чтение;<br><code>1.20</code> — размеренное, чёткое произношение;<br><code>1.50</code> — максимально медленно, для длинных текстов.</dd>
+
+                <dt>Как работает</dt>
+                <dd>Параметр передаётся в Piper как <code>--length-scale</code> (локально) или в HTTP-запросе как <code>length_scale</code> (удалённо).</dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_accordion" href="#pt_help_silence">Пауза между предложениями</a>
+        </div>
+        <div class="panel-body collapse" id="pt_help_silence">
+            <dl class="dl-horizontal">
+                <dt>Назначение</dt>
+                <dd>Добавляет паузу (в секундах) между предложениями в синтезированном тексте. Полезно для длинных текстов, чтобы речь звучала естественнее.</dd>
+
+                <dt>Диапазон</dt>
+                <dd>от <strong>0.00</strong> (без паузы) до <strong>0.50</strong> секунд. По умолчанию <strong>0.10</strong>.</dd>
+
+                <dt>Как работает</dt>
+                <dd>Текст разбивается на предложения, каждое синтезируется отдельно, затем склеивается с указанной паузой.</dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_accordion" href="#pt_help_cache">Кэш</a>
+        </div>
+        <div class="panel-body collapse" id="pt_help_cache">
+            <dl class="dl-horizontal">
+                <dt>Сохранять кэш</dt>
+                <dd>Если включено, каждая синтезированная фраза сохраняется в файл. При повторном запросе той же фразы звук берётся из кэша, а не синтезируется заново. Значительно ускоряет повторяющиеся фразы (например, температура, время).</dd>
+
+                <dt>Удалять редкоиспользуемые фразы</dt>
+                <dd>Если включено, модуль автоматически удаляет файлы кэша, к которым не было обращений более 10 дней. Полезно для экономии места на диске и удаления устаревших записей (например, прогнозов погоды).</dd>
+
+                <dt>Директория кэша</dt>
+                <dd>Путь к папке с кэшированными аудиофайлами. По умолчанию <code>/tmp/piper-tts</code>. Убедитесь, что на диске достаточно места (хотя бы ~1 ГБ).</dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_accordion" href="#pt_help_ws">WebSocket port</a>
+        </div>
+        <div class="panel-body collapse" id="pt_help_ws">
+            <dl class="dl-horizontal">
+                <dt>Назначение</dt>
+                <dd>Порт WebSocket-сервера, который передаёт синтезированное аудио в браузер для воспроизведения. Если порт не указан — WebSocket не запускается, и звук воспроизводится через плеер AJAX.</dd>
+
+                <dt>Рекомендации</dt>
+                <dd>Обычно <strong>8090</strong>. Убедитесь, что порт не занят другим сервисом, и что он открыт в файрволе. Для SPA-панелей (mboard_pro) используйте WebSocket, так как AJAX-плеер может не работать корректно в динамических интерфейсах.</dd>
+
+                <dt>Подключение плеера</dt>
+                <dd>На обычных страницах MajorDoMo скрипт плеера подключается автоматически. На SPA-панелях добавьте в <code>index.html</code> перед <code>&lt;/body&gt;</code>:<br>
+                <code>&lt;script src="/templates/piper_tts/js/piper_tts.js"&gt;&lt;/script&gt;</code></dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_accordion" href="#pt_help_models">Управление моделями</a>
+        </div>
+        <div class="panel-body collapse" id="pt_help_models">
+            <p>Раздел доступен только в локальном режиме. Позволяет установить или удалить голосовые модели для Piper.</p>
+            <dl class="dl-horizontal">
+                <dt>Установка</dt>
+                <dd>Нажмите «Установить» для выбранной модели. Модуль скачает <code>.onnx</code> и <code>.onnx.json</code> с Hugging Face в «Директорию моделей». Прогресc отображается модальным окном.</dd>
+
+                <dt>Удаление</dt>
+                <dd>Нажмите «Удалить» — файлы модели будут стёрты с диска.</dd>
+
+                <dt>Доступные голоса</dt>
+                <dd>Список предопределён: <strong>irina</strong>, <strong>denis</strong>, <strong>dmitry</strong>, <strong>kseniya</strong>, <strong>natasha</strong>, <strong>nikita</strong>, <strong>rustam</strong>, <strong>vlad</strong>, <strong>yuriy</strong>. Каждый доступен в качествах <strong>low</strong>, <strong>medium</strong> и (для некоторых) <strong>high</strong>.</dd>
+            </dl>
+        </div>
+    </div>
+
+</div>
+
+<h4>Системные требования и 32/64-битные системы</h4>
+<div class="panel-group" id="pt_help_sys_accordion">
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_sys_accordion" href="#pt_help_arch">Архитектура</a>
+        </div>
+        <div class="panel-body collapse in" id="pt_help_arch">
+            <p>Локальный Piper (бинарник или pip-пакет) устанавливается <b>только на 64-битных</b> системах: <code>x86_64</code>, <code>amd64</code>, <code>aarch64</code>.</p>
+            <p>Сам модуль MajorDoMo устанавливается на любую архитектуру, включая 32-битные: <code>armv7l</code>, <code>i686</code>.</p>
+            <p>На 32-битных системах кнопка «Установить Piper» и раздел «Управление моделями» автоматически скрыты.</p>
+            <p><strong>Рекомендация для 32-битных систем:</strong> используйте удалённый режим — установите Piper на отдельный 64-битный сервер (или ПК) и подключитесь к нему по HTTP. Также удалённый Piper можно запустить на том же сервере в Docker-контейнере.</p>
+        </div>
+    </div>
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_sys_accordion" href="#pt_help_os">ОС и зависимости</a>
+        </div>
+        <div class="panel-body collapse" id="pt_help_os">
+            <table class="table table-bordered" style="width:auto">
+                <tr><td><b>ОС</b></td><td>Linux (Debian 11+, Ubuntu 22.04+, Raspberry Pi OS Bookworm)</td></tr>
+                <tr><td><b>PHP</b></td><td>7.4+ (требуются функции <code>exec</code>, <code>proc_open</code>, <code>shell_exec</code>)</td></tr>
+                <tr><td><b>FFmpeg</b></td><td>Опционально, для нормализации громкости (loudnorm) синтезированного аудио</td></tr>
+                <tr><td><b>libespeak-ng1</b></td><td>Необходима для Piper (фонемный анализатор)</td></tr>
+                <tr><td><b>Память</b></td><td>Модели <b>medium</b> (~60 МБ) требуют ~200 МБ свободной ОЗУ при синтезе. Модели <b>low</b> — ~100 МБ.</td></tr>
+                <tr><td><b>Диск</b></td><td>~100 МБ для модуля и библиотек, ~60 МБ на каждую medium-модель, ~500 МБ+ для кэша.</td></tr>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<h4>Установка удалённого Piper (<code>piper-tts[http]</code>)</h4>
+<div class="panel-group" id="pt_help_remote_accordion">
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_remote_accordion" href="#pt_help_remote_install">Установка и запуск</a>
+        </div>
+        <div class="panel-body collapse in" id="pt_help_remote_install">
+            <p>Выполните эти команды на сервере, который будет работать как TTS-движок (Linux x86_64 / aarch64):</p>
+            <pre style="background:#e9ecef;padding:10px;border-radius:3px;font-size:12px">
+# Установка системных зависимостей
+apt update && apt install -y curl wget git libespeak-ng1 libstdc++6 python3-venv python3-dev
+
+# Создание виртуального окружения и установка Piper с поддержкой HTTP
+python3 -m venv /opt/piper/venv
+/opt/piper/venv/bin/pip install --upgrade pip
+/opt/piper/venv/bin/pip install piper-tts[http]
+
+# Скачивание русского голоса Ирина (medium)
+/opt/piper/venv/bin/python3 -m piper.download_voices ru_RU-irina-medium
+
+# Запуск HTTP-сервера (порт 5000)
+/opt/piper/venv/bin/python3 -m piper.http_server -m ru_RU-irina-medium --host 0.0.0.0 --port 5000
+            </pre>
+        </div>
+    </div>
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_remote_accordion" href="#pt_help_remote_service">Systemd-сервис</a>
+        </div>
+        <div class="panel-body collapse" id="pt_help_remote_service">
+            <p>Для автоматического запуска при загрузке системы создайте systemd unit:</p>
+            <pre style="background:#e9ecef;padding:10px;border-radius:3px;font-size:12px">
+cat > /etc/systemd/system/piper.service << 'EOF'
+[Unit]
+Description=Piper TTS HTTP Server
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/piper/venv/bin/python3 -m piper.http_server -m ru_RU-irina-medium --host 0.0.0.0 --port 5000
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl daemon-reload && systemctl enable --now piper
+
+# Проверка статуса
+journalctl -u piper -n 20 --no-pager
+
+# Проверка API
+curl http://localhost:5000/voices
+            </pre>
+        </div>
+    </div>
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_remote_accordion" href="#pt_help_remote_models">Установка дополнительных голосов</a>
+        </div>
+        <div class="panel-body collapse" id="pt_help_remote_models">
+            <p>Чтобы установить другие голоса (например, мужской голос Денис):</p>
+            <pre style="background:#e9ecef;padding:10px;border-radius:3px;font-size:12px">
+# Установить голос
+/opt/piper/venv/bin/python3 -m piper.download_voices ru_RU-denis-medium
+
+# Перезапустить сервер (режим с автовыбором модели из установленных)
+systemctl restart piper
+            </pre>
+            <p>На сервере будет доступен голос <strong>denis</strong>. Модуль MajorDoMo получит обновлённый список через <code>GET /voices</code> после перезапуска.</p>
+        </div>
+    </div>
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_remote_accordion" href="#pt_help_remote_reqs">Системные требования для удалённого сервера</a>
+        </div>
+        <div class="panel-body collapse" id="pt_help_remote_reqs">
+            <ul>
+                <li>Любая 64-битная ОС Linux (Debian, Ubuntu и т.д.)</li>
+                <li>Python 3.9+</li>
+                <li>~300 МБ свободной ОЗУ на одну модель medium</li>
+                <li>Порт 5000 (или любой другой) должен быть открыт для MajorDoMo-сервера</li>
+                <li>Для слабых устройств (Raspberry Pi 3, Orange Pi) рекомендуется модель качества <strong>low</strong></li>
+            </ul>
+        </div>
+    </div>
+
+</div>
+
+<h4>Ручная установка локального Piper</h4>
+<div class="panel-group" id="pt_help_local_accordion">
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_local_accordion" href="#pt_help_local_manual">Если автоматическая установка не сработала</a>
+        </div>
+        <div class="panel-body collapse in" id="pt_help_local_manual">
+            <p>Автоматическая установка (кнопка <b>Установить Piper</b>) может не сработать на Raspberry Pi, устаревших версиях ОС, при отсутствии pip или ошибках сборки. В таких случаях установите Piper вручную:</p>
+            <pre style="background:#e9ecef;padding:10px;border-radius:3px;font-size:12px">
+apt update && apt install -y curl wget git libespeak-ng1 libstdc++6 python3-venv python3-dev
+
+git clone https://github.com/OHF-voice/piper1-gpl.git /opt/piper/piper1-gpl
+cd /opt/piper/piper1-gpl
+python3 -m venv .venv
+.venv/bin/pip install --upgrade pip
+.venv/bin/pip install .
+ln -sf /opt/piper/piper1-gpl/.venv/bin/piper /usr/local/bin/piper
+
+# Скачать русский голос Ирина (medium)
+mkdir -p /opt/piper/voices/ru_RU-irina-medium
+curl -fSL -o /opt/piper/voices/ru_RU-irina-medium/ru_RU-irina-medium.onnx \
+  "https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx"
+curl -fSL -o /opt/piper/voices/ru_RU-irina-medium/ru_RU-irina-medium.onnx.json \
+  "https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx.json"
+chown -R www-data:www-data /opt/piper/voices
+
+# Проверка
+echo "Привет, мир!" | /usr/local/bin/piper \
+  -m /opt/piper/voices/ru_RU-irina-medium/ru_RU-irina-medium.onnx \
+  -c /opt/piper/voices/ru_RU-irina-medium/ru_RU-irina-medium.onnx.json \
+  -f /tmp/test.wav && play /tmp/test.wav
+            </pre>
+            <p>Если <code>sox</code> (play) не установлен: <code>apt install -y sox</code>.</p>
+        </div>
+    </div>
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_local_accordion" href="#pt_help_local_voice">Установка других голосов вручную</a>
+        </div>
+        <div class="panel-body collapse" id="pt_help_local_voice">
+            <p>Скачайте модель с Hugging Face и положите в подкаталог директории моделей. Формат URL:</p>
+            <pre>https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/{голос}/{качество}/ru_RU-{голос}-{качество}.onnx
+https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/{голос}/{качество}/ru_RU-{голос}-{качество}.onnx.json</pre>
+            <p>Пример для голоса <b>denis / medium</b>:</p>
+            <pre style="background:#e9ecef;padding:10px;border-radius:3px;font-size:12px">
+mkdir -p /opt/piper/voices/ru_RU-denis-medium
+curl -fSL -o /opt/piper/voices/ru_RU-denis-medium/ru_RU-denis-medium.onnx \
+  "https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/denis/medium/ru_RU-denis-medium.onnx"
+curl -fSL -o /opt/piper/voices/ru_RU-denis-medium/ru_RU-denis-medium.onnx.json \
+  "https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/denis/medium/ru_RU-denis-medium.onnx.json"
+chown -R www-data:www-data /opt/piper/voices
+            </pre>
+        </div>
+    </div>
+
+</div>

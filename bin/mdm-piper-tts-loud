@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+export PIPER_LENGTH_SCALE="${PIPER_LENGTH_SCALE:-0.90}"
+export PIPER_SENTENCE_SILENCE="${PIPER_SENTENCE_SILENCE:-0.10}"
+export PIPER_VOLUME_PULSE="${PIPER_VOLUME_PULSE:-60000}"
+exec /home/pi/.local/bin/mdm-piper-tts "$@"

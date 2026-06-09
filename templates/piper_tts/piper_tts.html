@@ -1,5 +1,39 @@
-[#if ACTION="" || ACTION="admin"#]
- [#if VIEW_MODE=""#]
-  [#inc settings.html#]
- [#endif#]
+<h3>
+    <img src="/img/modules/piper_tts.png" style="width:32px;height:32px;vertical-align:middle;margin-right:8px;">
+    <#LANG_PIPER_TTS_TITLE#>
+    <span style="margin-left:12px;font-size:13px;font-weight:normal;">
+        <span id="connect_status_dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:[#if CONNECT_STATUS="1"#]#28a745[#else#]#dc3545[#endif#];vertical-align:middle;margin-right:3px"></span>
+        <span id="connect_status_text" style="vertical-align:middle;">[#if CONNECT_STATUS="1"#]<#LANG_PIPER_TTS_CONNECTED#>[#else#]<#LANG_PIPER_TTS_DISCONNECTED#>[#endif#]</span>
+[#if IS_REMOTE=""#][#if ARCH_64="1"#]
+        <span style="margin-left:8px">
+            <span id="install_status_dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:[#if INSTALL_STATUS="1"#]#28a745[#else#][#if INSTALL_STATUS="2"#]#ffc107[#else#]#dc3545[#endif#][#endif#];vertical-align:middle;margin-right:3px"></span>
+            <span id="install_status_text" style="vertical-align:middle;">[#if INSTALL_STATUS="1"#]<#LANG_PIPER_TTS_INSTALLED_TRUE#>[#else#][#if INSTALL_STATUS="2"#]<#LANG_PIPER_TTS_INSTALLED_PENDING#>[#else#]<#LANG_PIPER_TTS_INSTALLED_FALSE#>[#endif#][#endif#]</span>
+            <button id="install_piper_btn" class="btn btn-success btn-sm" style="margin-left:6px;vertical-align:middle;[#if INSTALL_STATUS="1"#]display:none[#else#][#if INSTALL_STATUS="2"#]display:none[#endif#][#endif#]" onclick="installPiper();return false"><#LANG_PIPER_TTS_INSTALL_PIPER#></button>
+        </span>
+[#endif#][#endif#]
+    </span>
+    <span style="float:right;margin-top:4px;">
+        <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#piper_tts_about">О модуле&nbsp;&nbsp;<span class="glyphicon glyphicon-info-sign icon-white"></span></button>
+    </span>
+</h3>
+<hr>
+
+<ul class="nav nav-tabs">
+    <li [#if TAB_SETTINGS="1"#]class="active"[#endif#]><a href="?action=piper_tts&tab=settings"><#LANG_PIPER_TTS_SETTINGS#></a></li>
+[#if IS_REMOTE=""#]
+    <li [#if TAB_MODELS="1"#]class="active"[#endif#]><a href="?action=piper_tts&tab=models"><#LANG_PIPER_TTS_MODEL_MANAGEMENT#></a></li>
 [#endif#]
+    <li [#if TAB_HELP="1"#]class="active"[#endif#]><a href="?action=piper_tts&tab=help"><#LANG_PIPER_TTS_HELP#></a></li>
+</ul>
+<br>
+
+[#if TAB_SETTINGS="1"#]
+    [#inc settings.html#]
+[#endif#]
+[#if TAB_MODELS="1"#]
+    [#inc models.html#]
+[#endif#]
+[#if TAB_HELP="1"#]
+    [#inc help.html#]
+[#endif#]
+[#inc about.html#]

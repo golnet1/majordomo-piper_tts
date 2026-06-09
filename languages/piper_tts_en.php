@@ -2,7 +2,7 @@
 
 $dictionary = array(
     'PIPER_TTS_TITLE' => 'Piper TTS',
-    'PIPER_TTS_BIN' => 'Piper binary',
+    'PIPER_TTS_PIPER' => 'Piper (local path or IP:port)',
     'PIPER_TTS_MODEL' => 'Model (.onnx)',
     'PIPER_TTS_MODELS_DIR' => 'Models directory',
     'PIPER_TTS_LENGTH_SCALE' => 'Speed',
@@ -21,6 +21,9 @@ $dictionary = array(
     'PIPER_TTS_INSTALLED_TRUE' => 'Installed',
     'PIPER_TTS_INSTALLED_FALSE' => 'Not installed',
     'PIPER_TTS_INSTALLED_PENDING' => 'Installing',
+    'PIPER_TTS_CONNECTED' => 'Connected',
+    'PIPER_TTS_DISCONNECTED' => 'Not connected',
+    'PIPER_TTS_INSTALL_PIPER' => 'Install Piper',
     'PIPER_TTS_PLAYER_SETUP' => 'Browser player setup',
     'PIPER_TTS_AUTO_SETUP' => 'On standard pages (control panel, sections) the script connects automatically. No manual action needed.',
     'PIPER_TTS_SPA_SETUP' => 'On dynamic SPA panels (e.g., mboard_pro) — add to <code>index.html</code> before <code>&lt;/body&gt;</code>:',
@@ -30,6 +33,10 @@ $dictionary = array(
     'PIPER_TTS_DONE' => 'Done!',
     'PIPER_TTS_FILE_PROGRESS' => 'File %d of %d (%d%%)',
     'PIPER_TTS_CACHE_CLEANUP' => 'Delete rarely used phrases (10 days)',
+    'PIPER_TTS_HELP' => 'Help',
+    'PIPER_TTS_SETTINGS' => 'Settings',
+    'PIPER_TTS_FILTER' => 'Filter...',
+    'PIPER_TTS_ALL' => 'All',
 );
 
 foreach ($dictionary as $k => $v) {

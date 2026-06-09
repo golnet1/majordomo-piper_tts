@@ -1,24 +1,33 @@
 <form action="?" method="post" enctype="multipart/form-data" name="frmEdit">
  <input type="hidden" name="mode" value="update">
+ <input type="hidden" name="tab" value="settings">
  <input type="hidden" name="view_mode" value="update_settings">
  <fieldset>
-     <legend><img src="/img/modules/piper_tts.png" style="width:24px;height:24px;vertical-align:middle;margin-right:6px"> <#LANG_PIPER_TTS_TITLE#> <span id="piper_status_dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:[#if PIPER_STATUS="0"#]#dc3545[#else#][#if PIPER_STATUS="2"#]#ffc107[#else#]#28a745[#endif#][#endif#];vertical-align:middle;margin-left:6px"></span> <span id="piper_status_text" style="vertical-align:middle;font-size:12px;[#if PIPER_STATUS="0"#]color:#dc3545[#else#][#if PIPER_STATUS="2"#]color:#856404[#else#]color:#28a745[#endif#][#endif#]">[#if PIPER_STATUS="0"#]<#LANG_PIPER_TTS_INSTALLED_FALSE#>[#else#][#if PIPER_STATUS="2"#]<#LANG_PIPER_TTS_INSTALLED_PENDING#>[#else#]<#LANG_PIPER_TTS_INSTALLED_TRUE#>[#endif#][#endif#]</span></legend>
+     <legend><#LANG_PIPER_TTS_SETTINGS#></legend>
    <div>
-    <label><#LANG_PIPER_TTS_BIN#><br>
+    <label><#LANG_PIPER_TTS_PIPER#><br>
     <input type="text" name="piper_bin" value="[#PIPER_BIN#]" size="60">
    </label>
   </div>
+[#if IS_REMOTE=""#]
   <div>
     <label><#LANG_PIPER_TTS_MODELS_DIR#><br>
     <input type="text" name="models_dir" value="[#MODELS_DIR#]" size="60" onchange="document.frmEdit.submit()">
    </label>
   </div>
+[#endif#]
   <div>
     <label><#LANG_PIPER_TTS_MODEL#><br>
     <select name="model" size="1" style="width:100%">
+[#if IS_REMOTE="1"#]
+[#begin REMOTE_MODELS#]
+     <option value="[#VALUE#]" [#SELECTED#]>[#TITLE#]</option>
+[#end REMOTE_MODELS#]
+[#else#]
 [#begin MODELS#]
      <option value="[#VALUE#]" [#SELECTED#]>[#TITLE#]</option>
 [#end MODELS#]
+[#endif#]
     </select>
    </label>
   </div>
@@ -51,59 +60,52 @@
    </label>
   </div>
    </fieldset>
-   <fieldset>
-     <legend><#LANG_PIPER_TTS_MODEL_MANAGEMENT#></legend>
-    <table width="100%">
-      <tr><th align="left"><#LANG_PIPER_TTS_VOICE#></th><th><#LANG_PIPER_TTS_QUALITY#></th><th><#LANG_PIPER_TTS_STATUS#></th><th></th></tr>
-[#begin AVAILABLE_MODELS#]
-      <tr>
-       <td>[#VOICE#]</td>
-       <td>[#QUALITY#]</td>
-        <td>[#if INSTALLED="1"#]<#LANG_PIPER_TTS_INSTALLED_TRUE#>[#else#]<#LANG_PIPER_TTS_INSTALLED_FALSE#>[#endif#]</td>
-       <td>
-[#if INSTALLED="1"#]
-         <a href="?cmd=delete_model&voice=[#VOICE#]&quality=[#QUALITY#]" class="btn btn-danger" onclick="return confirm('<#LANG_PIPER_TTS_CONFIRM_DELETE#>'.replace('%s','[#VOICE#]').replace('%s','[#QUALITY#]'))"><#LANG_PIPER_TTS_DELETE#></a>
-[#else#]
-         <a href="?cmd=install_model&voice=[#VOICE#]&quality=[#QUALITY#]" class="btn btn-success" onclick="return confirm('<#LANG_PIPER_TTS_CONFIRM_INSTALL#>'.replace('%s','[#VOICE#]').replace('%s','[#QUALITY#]'))"><#LANG_PIPER_TTS_INSTALL#></a>
-[#endif#]
-       </td>
-      </tr>
-[#end AVAILABLE_MODELS#]
-    </table>
-   </fieldset>
+
     <input type="submit" name="submit" value="<#LANG_UPDATE#>" class="btn btn-primary">
     <script>
     document.getElementById('lbl_length_scale').textContent=document.getElementsByName('length_scale')[0].value;
     document.getElementById('lbl_sentence_silence').textContent=document.getElementsByName('sentence_silence')[0].value;
+    function installPiper(){
+      var btn=document.getElementById('install_piper_btn');
+      if(btn)btn.style.display='none';
+      var x=new XMLHttpRequest();
+      x.open('GET','/admin.php?action=piper_tts&cmd=install_piper',true);
+      x.send();
+    }
     setInterval(function(){
       var x=new XMLHttpRequest();
       x.open('GET','/admin.php?action=piper_tts&cmd=check_piper_status',true);
       x.onload=function(){
         if(x.status!=200)return;
         try{var r=JSON.parse(x.responseText)}catch(e){return}
-        var d=document.getElementById('piper_status_dot');
-        var t=document.getElementById('piper_status_text');
-        if(!d||!t)return;
-        if(r.status=='installed'){
-          d.style.background='#28a745';
-          t.style.color='#28a745';
-          t.textContent='<#LANG_PIPER_TTS_INSTALLED_TRUE#>';
-        }else if(r.status=='installing'){
-          d.style.background='#ffc107';
-          t.style.color='#856404';
-          t.textContent='<#LANG_PIPER_TTS_INSTALLED_PENDING#>';
-        }else{
-          d.style.background='#dc3545';
-          t.style.color='#dc3545';
-          t.textContent='<#LANG_PIPER_TTS_INSTALLED_FALSE#>';
+        var cd=document.getElementById('connect_status_dot');
+        var ct=document.getElementById('connect_status_text');
+        if(cd&&ct){
+          if(r.connect=='connected'){
+            cd.style.background='#28a745';ct.style.color='#28a745';ct.textContent='<#LANG_PIPER_TTS_CONNECTED#>';
+          }else{
+            cd.style.background='#dc3545';ct.style.color='#dc3545';ct.textContent='<#LANG_PIPER_TTS_DISCONNECTED#>';
+          }
         }
+[#if IS_REMOTE=""#][#if ARCH_64="1"#]
+        var id=document.getElementById('install_status_dot');
+        var it=document.getElementById('install_status_text');
+        var ib=document.getElementById('install_piper_btn');
+        if(id&&it){
+          if(r.install=='installed'){
+            id.style.background='#28a745';it.style.color='#28a745';it.textContent='<#LANG_PIPER_TTS_INSTALLED_TRUE#>';
+            if(ib)ib.style.display='none';
+          }else if(r.install=='installing'){
+            id.style.background='#ffc107';it.style.color='#856404';it.textContent='<#LANG_PIPER_TTS_INSTALLED_PENDING#>';
+            if(ib)ib.style.display='none';
+          }else{
+            id.style.background='#dc3545';it.style.color='#dc3545';it.textContent='<#LANG_PIPER_TTS_INSTALLED_FALSE#>';
+            if(ib)ib.style.display='';
+          }
+        }
+[#endif#][#endif#]
       };
       x.send();
     },3000);
     </script>
   </form>
-<hr>
-<h3><#LANG_PIPER_TTS_PLAYER_SETUP#></h3>
-<p><#LANG_PIPER_TTS_AUTO_SETUP#></p>
-<p><#LANG_PIPER_TTS_SPA_SETUP#></p>
-<pre>&lt;script src="/templates/piper_tts/js/piper_tts.js"&gt;&lt;/script&gt;</pre>
