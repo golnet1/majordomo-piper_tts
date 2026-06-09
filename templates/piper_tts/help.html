@@ -366,3 +366,29 @@ chown -R www-data:www-data /opt/piper/voices
     </div>
 
 </div>
+
+<h4>Возможные проблемы</h4>
+<div class="panel-group" id="pt_help_trouble_accordion">
+
+    <div class="panel panel-warning">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_trouble_accordion" href="#pt_help_htaccess">prepend.php не выполняется (.htaccess игнорируется)</a>
+        </div>
+        <div class="panel-body collapse in" id="pt_help_htaccess">
+            <p><strong>Причина:</strong> Модуль использует <code>prepend.php</code> для вставки WebSocket-плеера на страницы MajorDoMo. При установке модуль добавляет в <code>.htaccess</code> строку:</p>
+            <pre style="background:#e9ecef;padding:10px;border-radius:3px;font-size:12px">php_value auto_prepend_file /var/www/html/modules/piper_tts/prepend.php</pre>
+            <p>Однако на многих серверах Apache настроен с <code>AllowOverride None</code> во всех конфигурациях виртуальных хостов. В этом случае <strong>.htaccess полностью игнорируется</strong>, директива <code>php_value</code> не применяется, и <code>prepend.php</code> никогда не выполняется.</p>
+            <p><strong>Признак:</strong> индикаторы состояния в заголовке модуля работают, при синтезе звук воспроизводится, но в браузере WebSocket-плеер не подключается.</p>
+            <p><strong>Решение:</strong></p>
+            <ol>
+                <li>Определите, какой SAPI использует Apache: если <code>mod_php</code> — пропишите <code>AllowOverride All</code> для корня сайта в конфиге виртуального хоста Apache и перезагрузите Apache. Если <strong>PHP-FPM</strong> — <code>.htaccess</code> с <code>php_value</code> всё равно не сработает, нужен другой способ.</li>
+                <li>Для <strong>PHP-FPM</strong> пропишите <code>auto_prepend_file</code> напрямую в пул FPM. Найдите <code>php.ini</code>, используемый пулом FPM (обычно <code>/etc/php/ВЕРСИЯ/fpm/php.ini</code>) и добавьте в конец:<br>
+                <code>auto_prepend_file = /var/www/html/modules/piper_tts/prepend.php</code></li>
+                <li>Перезапустите PHP-FPM: <code>systemctl restart php8.3-fpm</code> (замените версию PHP на вашу).</li>
+                <li>Проверьте, что скрипт выполняется: откройте любую страницу MajorDoMo и посмотрите в исходном коде наличие <code>window.PIPER_WS_PORT</code>.</li>
+            </ol>
+            <p>После этого <code>prepend.php</code> будет выполняться на всех страницах, и WebSocket-плеер заработает.</p>
+        </div>
+    </div>
+
+</div>
