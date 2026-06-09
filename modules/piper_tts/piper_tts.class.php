@@ -710,10 +710,11 @@ class piper_tts extends module
                 $model = $this->config['MODEL'];
                 $ls = $this->config['LENGTH_SCALE'];
                 $ss = $this->config['SENTENCE_SILENCE'];
-                $cmd = $script . ' ' . escapeshellarg($clean) . ' ' . escapeshellarg($path) .
-                    ' ' . escapeshellarg($model) .
+                $cmd = $script . ' --no-play --output-file ' . escapeshellarg($path) .
+                    ' --model ' . escapeshellarg($model) .
                     ' --length-scale ' . escapeshellarg($ls) .
-                    ' --sentence-silence ' . escapeshellarg($ss);
+                    ' --sentence-silence ' . escapeshellarg($ss) .
+                    ' -- ' . escapeshellarg($clean);
             } else {
                 $bin = $this->config['PIPER_BIN'];
                 $model = $this->config['MODEL'];

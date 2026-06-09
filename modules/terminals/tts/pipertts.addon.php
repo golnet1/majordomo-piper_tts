@@ -17,10 +17,7 @@ class pipertts extends tts_addon
 
     private function playPhraseDirect($phrase)
     {
-        $script = '/home/pi/.local/bin/mdm-piper-tts';
-        if (!is_executable($script)) {
-            $script = '/usr/local/bin/mdm-piper-tts';
-        }
+        $script = '/usr/local/bin/mdm-piper-tts';
         if (!is_executable($script)) {
             DebMes('pipertts: mdm-piper-tts not executable', 'terminals');
             return false;
