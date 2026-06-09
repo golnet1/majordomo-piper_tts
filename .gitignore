@@ -1,3 +1,4 @@
 *.tar.gz
 *.tgz
 CONVERSATION_LOG.md
+*.wav
