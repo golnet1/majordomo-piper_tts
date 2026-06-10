@@ -21,7 +21,7 @@ ob_start(function ($buffer) {
         $buffer = gzdecode($buffer);
         if ($buffer === false) return false;
     }
-    $script = '<script>if(window.top===window.self){var s=document.createElement("script");s.src="/templates/piper_tts/js/piper_tts.js";document.body.appendChild(s)}</script>';
+    $script = '<script>if(window.top===window.self){var s=document.createElement("script");s.src="/templates/piper_tts/js/piper_tts.js?' . filemtime(__FILE__) . '";document.body.appendChild(s)}</script>';
     if (($pos = stripos($buffer, '</body>')) !== false) {
         $buffer = substr_replace($buffer, $script . "\n</body>", $pos, 7);
     } else {

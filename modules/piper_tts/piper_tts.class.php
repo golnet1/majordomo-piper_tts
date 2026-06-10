@@ -772,20 +772,54 @@ SETUP;
         subscribeToEvent($this->name, 'SAY', '', 110);
         subscribeToEvent($this->name, 'SAYREPLY', '', 110);
 
-        // --- .htaccess для prepend.php ---
-        $prependPath = ROOT . 'modules/piper_tts/prepend.php';
-        if (!file_exists($prependPath)) {
-            $log("install: prepend.php not found at $prependPath, skipping .htaccess update");
-        } else {
-            $htaccess = ROOT . '.htaccess';
-            if (file_exists($htaccess)) {
-                $content = file_get_contents($htaccess);
-                $line = 'php_value auto_prepend_file ' . $prependPath;
-                if (strpos($content, 'piper_tts/prepend.php') === false) {
-                    file_put_contents($htaccess, $line . "\n" . $content);
-                    $log('install: added prepend to .htaccess');
-                }
+        // --- Общий modules/prepend.php (загрузчик) ---
+        $loaderPath = ROOT . 'modules/prepend.php';
+        $htaccessPath = ROOT . '.htaccess';
+
+        if (!file_exists($loaderPath)) {
+            $loaderContent = <<<'PHP'
+<?php
+if (PHP_SAPI === 'cli') return;
+
+$configFile = __DIR__ . '/../config.php';
+if (!file_exists($configFile)) return;
+include_once $configFile;
+
+$link = @mysqli_connect(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME);
+if (!$link) return;
+
+$result = mysqli_query($link, "SELECT NAME FROM project_modules WHERE HIDDEN=0");
+if (!$result) { mysqli_close($link); return; }
+
+while ($row = mysqli_fetch_assoc($result)) {
+    $prepend = __DIR__ . '/' . $row['NAME'] . '/prepend.php';
+    if (file_exists($prepend)) {
+        include_once $prepend;
+    }
+}
+
+mysqli_close($link);
+PHP;
+            file_put_contents($loaderPath, $loaderContent);
+            $log('install: created modules/prepend.php');
+        }
+
+        // --- .htaccess ---
+        if (file_exists($htaccessPath)) {
+            $htContent = file_get_contents($htaccessPath);
+
+            // Удалить старую прямую строку Piper, если осталась
+            $oldPiper = 'php_value auto_prepend_file ' . ROOT . 'modules/piper_tts/prepend.php';
+            $htContent = str_replace(array($oldPiper . "\r\n", $oldPiper . "\n", $oldPiper), '', $htContent);
+
+            // Добавить строку с общим загрузчиком, если её нет
+            $line = 'php_value auto_prepend_file ' . $loaderPath;
+            if (strpos($htContent, 'modules/prepend.php') === false) {
+                $htContent = $line . "\n" . $htContent;
+                $log('install: added auto_prepend_file to .htaccess');
             }
+
+            file_put_contents($htaccessPath, $htContent);
         }
 
         parent::install();
@@ -795,15 +829,34 @@ SETUP;
     {
         unsubscribeFromEvent($this->name, 'SAY');
         unsubscribeFromEvent($this->name, 'SAYREPLY');
-        @unlink(ROOT . 'modules/piper_tts/prepend.php');
-        $htaccess = ROOT . '.htaccess';
-        if (file_exists($htaccess)) {
-            $content = file_get_contents($htaccess);
-            $line = 'php_value auto_prepend_file ' . ROOT . 'modules/piper_tts/prepend.php';
-            $content = str_replace(array($line . "\r\n", $line . "\n", $line), '', $content);
-            $content = preg_replace('/\n{3,}/', "\n\n", $content);
-            file_put_contents($htaccess, $content);
+
+        $loaderPath = ROOT . 'modules/prepend.php';
+        $htaccessPath = ROOT . '.htaccess';
+
+        // Проверить, установлен ли Vosk (тоже использует общий загрузчик)
+        $voskStillInstalled = false;
+        $link = @mysqli_connect(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME);
+        if ($link) {
+            $res = mysqli_query($link, "SELECT ID FROM project_modules WHERE NAME='vosk' AND HIDDEN=0");
+            if ($res && mysqli_num_rows($res) > 0) {
+                $voskStillInstalled = true;
+            }
+            mysqli_close($link);
         }
+
+        if (!$voskStillInstalled) {
+            if (file_exists($htaccessPath)) {
+                $htContent = file_get_contents($htaccessPath);
+                $line = 'php_value auto_prepend_file ' . $loaderPath;
+                $htContent = str_replace(array($line . "\r\n", $line . "\n", $line), '', $htContent);
+                $htContent = preg_replace('/\n{3,}/', "\n\n", $htContent);
+                file_put_contents($htaccessPath, $htContent);
+            }
+            if (file_exists($loaderPath)) {
+                @unlink($loaderPath);
+            }
+        }
+
         parent::uninstall();
     }
 }

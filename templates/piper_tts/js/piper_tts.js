@@ -2,34 +2,9 @@
   var ws = null;
   var host = window.location.hostname;
   var port = window.PIPER_WS_PORT || 8001;
-  var windowActive = document.visibilityState === 'visible' && document.hasFocus();
-
-  function onShow() {
-    windowActive = document.visibilityState === 'visible' && document.hasFocus();
-  }
-  function onBlur() {
-    windowActive = false;
-  }
-  function onFocus(e) {
-    if (e.target === window) {
-      windowActive = document.visibilityState === 'visible';
-    }
-  }
-
-  document.addEventListener('visibilitychange', onShow);
-  window.addEventListener('blur', onBlur);
-  window.addEventListener('focus', onFocus);
-
-  function tryPlay(url) {
-    if (!windowActive) return;
-    var token = Math.random().toString(36).slice(2);
-    localStorage.setItem('piper_tts_token', token);
-    if (localStorage.getItem('piper_tts_token') !== token) return;
-    var audio = new Audio(url);
-    audio.play().catch(function () {});
-  }
 
   function connect() {
+    if (ws && ws.readyState === WebSocket.OPEN) return;
     ws = new WebSocket('ws://' + host + ':' + port + '/majordomo');
 
     ws.onopen = function () {
@@ -52,15 +27,17 @@
         if (payload.EVENT_DATA.NAME !== 'PIPER_TTS') return;
         var data = payload.EVENT_DATA.VALUE;
         if (data && data.COMMAND === 'PlayAudio' && data.URL) {
-          tryPlay(data.URL);
+          var audio = new Audio(data.URL);
+          audio.play().catch(function () {});
         }
-      } catch (e) {
-        console.warn('PiperTTS: parse error', e);
-      }
+      } catch (e) {}
     };
 
     ws.onclose = function () {
-      setTimeout(connect, 5000);
+      ws = null;
+      if (!document.hidden) {
+        setTimeout(connect, 5000);
+      }
     };
 
     ws.onerror = function () {
@@ -68,7 +45,23 @@
     };
   }
 
-  if (window.WebSocket) {
+  function disconnect() {
+    if (ws) {
+      ws.onclose = null;
+      ws.close();
+      ws = null;
+    }
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) {
+      disconnect();
+    } else {
+      connect();
+    }
+  });
+
+  if (!document.hidden && window.WebSocket) {
     connect();
   }
 })();
