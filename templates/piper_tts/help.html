@@ -378,17 +378,21 @@ chown -R www-data:www-data /opt/piper/voices
             <p><strong>Причина:</strong> Для работы WebSocket-плеера в браузере модуль должен добавить на каждую страницу строку:</p>
             <pre style="background:#e9ecef;padding:10px;border-radius:3px;font-size:12px">&lt;script src="/templates/piper_tts/js/piper_tts.js"&gt;&lt;/script&gt;</pre>
             <p>Это делает файл <code>prepend.php</code> — он автоматически выполняется перед каждым PHP-скриптом и выводит этот тег. Чтобы PHP подгружал <code>prepend.php</code>, при установке модуля в <code>.htaccess</code> добавляется директива:</p>
-            <pre style="background:#e9ecef;padding:10px;border-radius:3px;font-size:12px">php_value auto_prepend_file /var/www/html/modules/piper_tts/prepend.php</pre>
-            <p>Проблема: на многих серверах Apache в конфигурации виртуального хоста стоит <code>AllowOverride None</code>. В этом случае Apache <strong>полностью игнорирует</strong> <code>.htaccess</code>, директива <code>php_value</code> не срабатывает, PHP не загружает <code>prepend.php</code>, и тег со скриптом не появляется на страницах.</p>
-            <p><strong>Признак:</strong> звук синтезируется и воспроизводится, но WebSocket-плеер в браузере не подключается (строка <code>window.PIPER_WS_PORT</code> отсутствует в исходном коде страниц).</p>
+            <pre style="background:#e9ecef;padding:10px;border-radius:3px;font-size:12px">php_value auto_prepend_file /var/www/html/modules/prepend.php</pre>
+            <p><strong>Случай 1: AllowOverride None</strong><br>
+            На многих серверах Apache в конфигурации виртуального хоста стоит <code>AllowOverride None</code>. В этом случае Apache <strong>игнорирует</strong> <code>.htaccess</code>, директива <code>php_value</code> не срабатывает, PHP не загружает <code>prepend.php</code>, и тег со скриптом не появляется на страницах.</p>
+            <p><strong>Случай 2: Apache использует PHP-FPM (mod_proxy_fcgi)</strong><br>
+            Если вместо <code>mod_php</code> Apache использует <code>mod_proxy_fcgi</code> + PHP-FPM, то директива <code>php_value</code> в <code>.htaccess</code> <strong>вызывает 500 Internal Server Error</strong> на всех PHP-страницах, так как модуль <code>mod_php</code> не загружен.</p>
+            <p><strong>Признак:</strong> в логе Apache (<code>/var/log/apache2/error.log</code>): <code>Invalid command 'php_value', perhaps misspelled or defined by a module not included in the server configuration</code>.</p>
             <p><strong>Решение:</strong></p>
             <ol>
                 <li>Если Apache использует <code>mod_php</code> — пропишите <code>AllowOverride All</code> для корня сайта в конфиге виртуального хоста и перезагрузите Apache.</li>
-                <li>Если Apache использует <strong>PHP-FPM</strong> — <code>.htaccess</code> с <code>php_value</code> не работает в принципе. Откройте <code>php.ini</code> пула FPM (обычно <code>/etc/php/ВЕРСИЯ/fpm/php.ini</code>) и добавьте в конец:<br>
-                <code>auto_prepend_file = /var/www/html/modules/piper_tts/prepend.php</code></li>
+                <li>Если Apache использует <strong>PHP-FPM</strong> — удалите строку <code>php_value</code> из <code>.htaccess</code> (при установке Vosk или Piper она могла добавиться). Вместо этого пропишите директиву в <code>php.ini</code> пула FPM (обычно <code>/etc/php/ВЕРСИЯ/fpm/php.ini</code>):<br>
+                <code>auto_prepend_file = /var/www/html/modules/prepend.php</code></li>
                 <li>Перезапустите PHP-FPM: <code>systemctl restart php8.3-fpm</code> (замените версию PHP на вашу).</li>
                 <li>Проверьте: откройте любую страницу MajorDoMo и посмотрите в исходном коде — должна быть строка <code>&lt;script src="/templates/piper_tts/js/piper_tts.js"&gt;&lt;/script&gt;</code>.</li>
             </ol>
+            <p><strong>Примечание:</strong> Начиная с версии 1.0.4 модули Vosk и Piper используют общий загрузчик <code>modules/prepend.php</code>, который подключает индивидуальные <code>prepend.php</code> из каждого активного модуля. Поэтому строка в <code>.htaccess</code> или <code>php.ini</code> должна указывать на <code>/var/www/html/modules/prepend.php</code>, а не на <code>modules/piper_tts/prepend.php</code>.</p>
         </div>
     </div>
 
