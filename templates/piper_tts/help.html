@@ -393,6 +393,47 @@ chown -R www-data:www-data /opt/piper/voices
                 <li>Проверьте: откройте любую страницу MajorDoMo и посмотрите в исходном коде — должна быть строка <code>&lt;script src="/templates/piper_tts/js/piper_tts.js"&gt;&lt;/script&gt;</code>.</li>
             </ol>
             <p><strong>Примечание:</strong> Начиная с версии 1.0.4 модули Vosk и Piper используют общий загрузчик <code>modules/prepend.php</code>, который подключает индивидуальные <code>prepend.php</code> из каждого активного модуля. Поэтому строка в <code>.htaccess</code> или <code>php.ini</code> должна указывать на <code>/var/www/html/modules/prepend.php</code>, а не на <code>modules/piper_tts/prepend.php</code>.</p>
+            <hr>
+            <p><strong>Случай 3: nginx + Apache (два веб-сервера)</strong><br>
+            На некоторых серверах Apache стоит на внутреннем порту (например, 81), а снаружи запросы принимает nginx на порту 80. Nginx может передавать PHP-запросы напрямую в PHP-FPM, минуя Apache, и при этом использовать <strong>другую версию PHP</strong>.</p>
+            <p><strong>Признак:</strong> скрипт вставляется на тестовой странице <code>test.php</code> через Apache (порт 81), но отсутствует на страницах MajorDoMo через nginx (порт 80).</p>
+            <p><strong>Решение:</strong></p>
+            <ol>
+                <li>Проверьте, какая версия PHP используется nginx — обычно она указана в <code>/etc/nginx/sites-enabled/default</code> в директиве <code>fastcgi_pass</code>:<br>
+                <code>fastcgi_pass unix:/run/php/php8.4-fpm.sock;</code> — значит используется <strong>PHP 8.4</strong>.</li>
+                <li>Проверьте и при необходимости добавьте <code>auto_prepend_file</code> в <code>php.ini</code> этой версии:<br>
+                <code>grep auto_prepend_file /etc/php/8.4/fpm/php.ini</code></li>
+                <li>Если директива пустая — установите:<br>
+                <code>auto_prepend_file = /var/www/html/modules/prepend.php</code></li>
+                <li>Перезапустите соответствующий PHP-FPM:<br>
+                <code>systemctl restart php8.4-fpm</code></li>
+            </ol>
+            <p><strong>Важно:</strong> Если Apache использует PHP 8.3, а nginx — PHP 8.4, директиву нужно прописать в ОБОИХ <code>php.ini</code>:
+            <code>/etc/php/8.3/fpm/php.ini</code> и <code>/etc/php/8.4/fpm/php.ini</code>.</p>
+        </div>
+    </div>
+
+    <div class="panel panel-warning">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_trouble_accordion" href="#pt_help_prepend_howto">Как проверить, что скрипт вставляется</a>
+        </div>
+        <div class="panel-body collapse" id="pt_help_prepend_howto">
+            <p><strong>prepend.php</strong> вставляет на страницу инлайн-скрипт, а не прямой тег <code>&lt;script src="..."&gt;</code>:</p>
+            <pre style="background:#e9ecef;padding:10px;border-radius:3px;font-size:12px">&lt;script&gt;if(window.top===window.self){var s=document.createElement("script");s.src="/templates/piper_tts/js/piper_tts.js?TIMESTAMP";document.body.appendChild(s)}&lt;/script&gt;</pre>
+            <p>Поэтому в исходном коде страницы ищите <strong>piper_tts.js</strong>, а не <code>&lt;script src="/templates/piper_tts/js/piper_tts.js"&gt;</code> — такого тега в HTML нет, скрипт грузится динамически через <code>document.createElement</code>.</p>
+            <p>Параметр <strong>TIMESTAMP</strong> — это <code>filemtime(prepend.php)</code> — меняется при каждом редактировании файла, форсируя сброс кэша браузера.</p>
+            <p>Проверка <code>window.top===window.self</code> предотвращает вставку скрипта во фреймы (админка, встраиваемые панели). На страницах <code>/admin/</code> и <code>/popup/</code> скрипт не вставляется вовсе.</p>
+        </div>
+    </div>
+
+    <div class="panel panel-warning">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_trouble_accordion" href="#pt_help_ws_hidden">Фоновая вкладка — WS отключается</a>
+        </div>
+        <div class="panel-body collapse" id="pt_help_ws_hidden">
+            <p>Когда вкладка браузера уходит в фон (<code>document.hidden</code>), WebSocket-плеер автоматически <strong>закрывает соединение</strong>. При возврате на вкладку (<code>visible</code>) соединение восстанавливается.</p>
+            <p>Это сделано, чтобы TTS-уведомления не воспроизводились одновременно на всех открытых вкладках. Если вкладка неактивна, событие <code>PIPER_TTS</code> через WS не придёт, и звук не проиграется. Активная вкладка — единственный получатель.</p>
+            <p>Плеер не использует <code>localStorage</code>, <code>flock</code> или <code>claim_job</code> — только событие <code>visibilitychange</code>. Это надёжнее и проще.</p>
         </div>
     </div>
 
