@@ -667,6 +667,12 @@ class piper_tts extends module
             return;
         }
 
+        // SAYTO: destination (terminal name) for targeted playback
+        $destination = '';
+        if (isset($details['destination'])) {
+            $destination = $details['destination'];
+        }
+
         $cacheDir = $this->config['CACHE_DIR'];
         $useCache = (int)$this->config['USE_CACHE'] === 1;
         $md5 = md5($message);
@@ -690,13 +696,19 @@ class piper_tts extends module
             $webPath = str_replace('\\', '/', $webPath);
             $url = '/' . ltrim($webPath, '/');
 
-            $result = postToWebSocket("PIPER_TTS", array(
+            $payload = array(
                 'COMMAND' => 'PlayAudio',
                 'URL' => $url,
-            ), "PostEvent");
+            );
+            if ($destination !== '') {
+                $payload['DESTINATION'] = $destination;
+            }
+
+            $result = postToWebSocket("PIPER_TTS", $payload, "PostEvent");
 
             if (function_exists('DebMes')) {
-                DebMes("piper_tts: postToWebSocket result=" . ($result === false ? 'false' : 'ok') . " url=$url", 'piper_tts');
+                $destLog = $destination !== '' ? " dest=$destination" : '';
+                DebMes("piper_tts: postToWebSocket result=" . ($result === false ? 'false' : 'ok') . " url=$url$destLog", 'piper_tts');
             }
         } else {
             if (function_exists('DebMes')) DebMes("piper_tts: wav not found after synthesis", 'piper_tts');
@@ -770,6 +782,7 @@ SETUP;
         };
 
         subscribeToEvent($this->name, 'SAY', '', 110);
+        subscribeToEvent($this->name, 'SAYTO', '', 110);
         subscribeToEvent($this->name, 'SAYREPLY', '', 110);
 
         // --- Общий modules/prepend.php (загрузчик) ---
@@ -828,6 +841,7 @@ PHP;
     function uninstall()
     {
         unsubscribeFromEvent($this->name, 'SAY');
+        unsubscribeFromEvent($this->name, 'SAYTO');
         unsubscribeFromEvent($this->name, 'SAYREPLY');
 
         $loaderPath = ROOT . 'modules/prepend.php';
