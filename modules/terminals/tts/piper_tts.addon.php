@@ -17,14 +17,31 @@ class piper_tts extends tts_addon
 
     private function playPhraseDirect($phrase)
     {
-        $script = '/usr/local/bin/piper';
-        if (!is_executable($script)) {
+        $bin = '/usr/local/bin/piper';
+        $model = '/opt/piper/voices/ru_RU-irina-medium/ru_RU-irina-medium.onnx';
+        $ls = '0.95';
+        $ss = '0.15';
+        $row = SQLSelectOne("SELECT DATA FROM project_modules WHERE NAME='piper_tts'");
+        if (!empty($row['DATA'])) {
+            $cfg = unserialize($row['DATA']);
+            if (!empty($cfg['PIPER_BIN'])) $bin = $cfg['PIPER_BIN'];
+            if (!empty($cfg['MODEL'])) $model = $cfg['MODEL'];
+            if (!empty($cfg['LENGTH_SCALE'])) $ls = $cfg['LENGTH_SCALE'];
+            if (!empty($cfg['SENTENCE_SILENCE'])) $ss = $cfg['SENTENCE_SILENCE'];
+        }
+        if (!is_executable($bin)) {
             DebMes('piper_tts: piper not executable', 'terminals');
             return false;
         }
+        $clean = preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $phrase);
+        $clean = preg_replace('/\s+/', ' ', trim($clean));
         $wav = tempnam(sys_get_temp_dir(), 'piper_') . '.wav';
-        $cmd = 'printf %s ' . escapeshellarg($phrase) . ' | ' . escapeshellarg($script) .
-            ' --model /opt/piper/voices/ru_RU-irina-medium/ru_RU-irina-medium.onnx' .
+        $cmd = 'printf %s ' . escapeshellarg($clean) . ' | ' .
+            escapeshellarg($bin) .
+            ' --model ' . escapeshellarg($model) .
+            ' --length-scale ' . escapeshellarg($ls) .
+            ' --sentence-silence ' . escapeshellarg($ss) .
+            ' --noise-scale 0.667 --noise-w 0.8' .
             ' --output-file ' . escapeshellarg($wav) . ' 2>/dev/null';
         safe_exec($cmd, 1, $out);
         if (!file_exists($wav)) return false;
@@ -37,12 +54,9 @@ class piper_tts extends tts_addon
         return true;
     }
 
-    /**
-     * Озвучка через SAY_CACHED_READY (модуль Piper). Иначе — двойной звук.
-     */
     public function say($phrase, $level = 0)
     {
-        return true;
+        return $this->playPhraseDirect($phrase);
     }
 
     public function sayCached($phrase, $level = 0, $cached_file = '')

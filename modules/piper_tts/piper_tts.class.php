@@ -667,7 +667,6 @@ class piper_tts extends module
             return;
         }
 
-        // SAYTO: destination (terminal name) for targeted playback
         $destination = '';
         if (isset($details['destination'])) {
             $destination = $details['destination'];
@@ -690,28 +689,38 @@ class piper_tts extends module
             $this->cleanupCache();
         }
 
-        if (file_exists($wavFile)) {
-            $docRoot = isset($_SERVER['DOCUMENT_ROOT']) ? rtrim($_SERVER['DOCUMENT_ROOT'], '/') : '/var/www/html';
-            $webPath = str_replace($docRoot, '', $wavFile);
-            $webPath = str_replace('\\', '/', $webPath);
-            $url = '/' . ltrim($webPath, '/');
-
-            $payload = array(
-                'COMMAND' => 'PlayAudio',
-                'URL' => $url,
-            );
-            if ($destination !== '') {
-                $payload['DESTINATION'] = $destination;
-            }
-
-            $result = postToWebSocket("PIPER_TTS", $payload, "PostEvent");
-
-            if (function_exists('DebMes')) {
-                $destLog = $destination !== '' ? " dest=$destination" : '';
-                DebMes("piper_tts: postToWebSocket result=" . ($result === false ? 'false' : 'ok') . " url=$url$destLog", 'piper_tts');
-            }
-        } else {
+        if (!file_exists($wavFile)) {
             if (function_exists('DebMes')) DebMes("piper_tts: wav not found after synthesis", 'piper_tts');
+            return;
+        }
+
+        $docRoot = isset($_SERVER['DOCUMENT_ROOT']) ? rtrim($_SERVER['DOCUMENT_ROOT'], '/') : '/var/www/html';
+        $webPath = str_replace($docRoot, '', $wavFile);
+        $webPath = str_replace('\\', '/', $webPath);
+        $url = '/' . ltrim($webPath, '/');
+
+        if ($event == 'SAYTO' && $destination !== '') {
+            $level = isset($details['level']) ? $details['level'] : (isset($details['IMPORTANCE']) ? $details['IMPORTANCE'] : 0);
+            processSubscriptionsSafe('SAY_CACHED_READY', array(
+                'level'    => $level,
+                'filename' => $wavFile,
+                'event'    => 'SAYTO',
+                'destination' => $destination,
+                'message'  => $message,
+            ));
+            if (function_exists('DebMes')) {
+                DebMes("piper_tts: SAY_CACHED_READY sent dest=$destination url=$url", 'piper_tts');
+            }
+            return;
+        }
+
+        $result = postToWebSocket("PIPER_TTS", array(
+            'COMMAND' => 'PlayAudio',
+            'URL' => $url,
+        ), "PostEvent");
+
+        if (function_exists('DebMes')) {
+            DebMes("piper_tts: postToWebSocket result=" . ($result === false ? 'false' : 'ok') . " url=$url", 'piper_tts');
         }
     }
 
