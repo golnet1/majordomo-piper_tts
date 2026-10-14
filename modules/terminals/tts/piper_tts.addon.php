@@ -172,12 +172,45 @@ class piper_tts_addon extends tts_addon
         return $played;
     }
 
+    /**
+     * Параллельные события SAY приходят почти одновременно, и фразы начинают
+     * звучать внахлёст. Блокировка сериализует воспроизведение: следующая фраза
+     * стартует только после завершения предыдущей.
+     */
+    private function lockPlayback()
+    {
+        $fp = @fopen(sys_get_temp_dir() . '/piper_tts_play.lock', 'c');
+        if ($fp) {
+            @flock($fp, LOCK_EX);
+        }
+        return $fp;
+    }
+
+    private function unlockPlayback($fp)
+    {
+        if ($fp) {
+            @flock($fp, LOCK_UN);
+            @fclose($fp);
+        }
+    }
+
     public function say($phrase, $level = 0)
     {
-        return $this->playPhraseDirect($phrase);
+        $lock = $this->lockPlayback();
+        $result = $this->playPhraseDirect($phrase);
+        $this->unlockPlayback($lock);
+        return $result;
     }
 
     public function sayCached($phrase, $level = 0, $cached_file = '')
+    {
+        $lock = $this->lockPlayback();
+        $result = $this->playCachedDirect($phrase, $cached_file);
+        $this->unlockPlayback($lock);
+        return $result;
+    }
+
+    private function playCachedDirect($phrase, $cached_file)
     {
         if ($cached_file !== '' && file_exists($cached_file) && $this->playFile($cached_file)) {
             return true;

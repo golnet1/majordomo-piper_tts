@@ -48,6 +48,17 @@
    </div>
   </div>
   <div class="form-group">
+   <label class="control-label col-lg-4" for="piper_test_text"><#LANG_PIPER_TTS_TEST#></label>
+   <div class="col-lg-6">
+    <textarea id="piper_test_text" class="form-control" rows="2">В Москве сейчас около +9°C, пасмурно, ощущается как +7°. Ветер слабый (~1,5 м/с), влажность высокая (~86%). На сегодня: облачно, местами слабый дождь, днём +8…+11°.</textarea>
+    <button type="button" class="btn btn-default" style="margin-top:8px" onclick="piperTestSay();return false"><span class="glyphicon glyphicon-volume-up"></span> <#LANG_PIPER_TTS_TEST_BTN#></button>
+    <button type="button" class="btn btn-default" style="margin-top:8px" onclick="piperTestExplain();return false"><span class="glyphicon glyphicon-search"></span> <#LANG_PIPER_TTS_EXPLAIN#></button>
+    <div style="margin-top:6px"><span id="piper_test_status"></span></div>
+    <div id="piper_test_explain"></div>
+    <span class="help-block" style="margin:6px 0 0"><#LANG_PIPER_TTS_TEST_HINT#></span>
+   </div>
+  </div>
+  <div class="form-group">
    <div class="col-lg-offset-4 col-lg-6">
     <div class="checkbox">
      <label><input type="checkbox" name="use_cache" value="1" [#USE_CACHE#] onchange="document.getElementById('cache_cleanup_wrap').style.display=this.checked?'':'none'"> <#LANG_PIPER_TTS_USE_CACHE#></label>
@@ -77,61 +88,45 @@
  <div class="form-actions">
   <input type="submit" name="submit" value="<#LANG_UPDATE#>" class="btn btn-primary">
  </div>
- <script>
- document.getElementById('lbl_length_scale').textContent=document.getElementsByName('length_scale')[0].value;
- document.getElementById('lbl_sentence_silence').textContent=document.getElementsByName('sentence_silence')[0].value;
- function installPiper(){
-  var btn=document.getElementById('install_piper_btn');
-  if(btn)btn.style.display='none';
-  var x=new XMLHttpRequest();
-  x.open('GET','/admin.php?action=piper_tts&cmd=install_piper',true);
-  x.send();
- }
- setInterval(function(){
-  var x=new XMLHttpRequest();
-  x.open('GET','/admin.php?action=piper_tts&cmd=check_piper_status',true);
-  x.onload=function(){
-   if(x.status!=200)return;
-   try{var r=JSON.parse(x.responseText)}catch(e){return}
-    var cd=document.getElementById('connect_status_dot');
-    var ct=document.getElementById('connect_status_text');
-    if(cd&&ct){
-     if(r.connect=='connected'){
-      cd.style.background='#28a745';ct.style.color='#28a745';ct.textContent='<#LANG_PIPER_TTS_CONNECTED#>';
-     }else{
-      cd.style.background='#dc3545';ct.style.color='#dc3545';ct.textContent='<#LANG_PIPER_TTS_DISCONNECTED#>';
-     }
-    }
-    // Синтез и доставка — независимые вещи: зелёная точка Piper не означает,
-    // что аудио дойдёт до вкладки, если WebSocket-сервер не поднят.
-    var wd=document.getElementById('ws_status_dot');
-    var wt=document.getElementById('ws_status_text');
-    if(wd&&wt){
-     if(r.ws=='connected'){
-      wd.style.background='#28a745';wt.style.color='#28a745';wt.textContent='<#LANG_PIPER_TTS_WS_CONNECTED#>';
-     }else{
-      wd.style.background='#dc3545';wt.style.color='#dc3545';wt.textContent='<#LANG_PIPER_TTS_WS_DISCONNECTED#>';
-     }
-    }
-[#if IS_REMOTE=""#][#if ARCH_64="1"#]
-   var id=document.getElementById('install_status_dot');
-   var it=document.getElementById('install_status_text');
-   var ib=document.getElementById('install_piper_btn');
-   if(id&&it){
-    if(r.install=='installed'){
-     id.style.background='#28a745';it.style.color='#28a745';it.textContent='<#LANG_PIPER_TTS_INSTALLED_TRUE#>';
-     if(ib)ib.style.display='none';
-    }else if(r.install=='installing'){
-     id.style.background='#ffc107';it.style.color='#856404';it.textContent='<#LANG_PIPER_TTS_INSTALLED_PENDING#>';
-     if(ib)ib.style.display='none';
-    }else{
-     id.style.background='#dc3545';it.style.color='#dc3545';it.textContent='<#LANG_PIPER_TTS_INSTALLED_FALSE#>';
-     if(ib)ib.style.display='';
-    }
-   }
-[#endif#][#endif#]
-  };
-  x.send();
- },3000);
- </script>
+  <script>
+  document.getElementById('lbl_length_scale').textContent=document.getElementsByName('length_scale')[0].value;
+  document.getElementById('lbl_sentence_silence').textContent=document.getElementsByName('sentence_silence')[0].value;
+  </script>
+  <script>
+  // «Проверка»: голос и параметры берём прямо со страницы — сохранять не обязательно.
+  var piperTestAudio=null;
+  function piperTestParams(){
+   var p='',m=document.getElementsByName('model')[0];
+   if(m&&m.value)p+='&model='+encodeURIComponent(m.value);
+   var ls=document.getElementsByName('length_scale')[0];
+   if(ls&&ls.value)p+='&length_scale='+encodeURIComponent(ls.value);
+   var ss=document.getElementsByName('sentence_silence')[0];
+   if(ss&&ss.value)p+='&sentence_silence='+encodeURIComponent(ss.value);
+   return p;
+  }
+  function piperTestText(){var ta=document.getElementById('piper_test_text');return ta?ta.value:'';}
+  function piperTestSay(){
+   var st=document.getElementById('piper_test_status');
+   var text=piperTestText();
+   if(!/\S/.test(text||''))return;
+   if(st){st.style.color='';st.textContent='…';}
+   var x=new XMLHttpRequest();
+   x.open('GET','/admin.php?action=piper_tts&cmd=test_say&t64='+piperB64(text)+piperTestParams()+'&_='+Date.now(),true);
+   x.onload=function(){var r=null;try{r=JSON.parse(x.responseText)}catch(e){}
+    if(!r||!r.ok){if(st){st.style.color='#dc3545';st.textContent='<#LANG_PIPER_TTS_TEST_FAIL#>'+(r&&r.error?': '+r.error:'');}return}
+    if(st)st.textContent='';
+    if(piperTestAudio)piperTestAudio.pause();
+    piperTestAudio=new Audio(r.audio);
+    var pr=piperTestAudio.play();
+    if(pr&&pr.catch)pr.catch(function(){if(st){st.style.color='#dc3545';st.textContent='<#LANG_PIPER_TTS_TEST_FAIL#>: '+r.audio;}});};
+   x.onerror=function(){if(st){st.style.color='#dc3545';st.textContent='<#LANG_PIPER_TTS_TEST_FAIL#>: HTTP';}};
+   x.send();
+  }
+  function piperTestExplain(){
+   var st=document.getElementById('piper_test_status'),box=document.getElementById('piper_test_explain');
+   var text=piperTestText();
+   if(!/\S/.test(text||''))return;
+   piperExplain('&t64='+piperB64(text)+piperTestParams(),box,st);
+  }
+  </script>
 </form>

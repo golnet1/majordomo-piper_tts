@@ -1,10 +1,34 @@
 <script>window.PIPER_WS_PORT=[#WS_PORT#];</script>
-<h3>
+<style>
+.piper-page fieldset{min-width:0}
+.piper-page{padding-top:16px}
+.piper-page code{white-space:normal;overflow-wrap:anywhere;word-break:break-word}
+.piper-explain{margin-top:8px;font-size:13px}
+.piper-explain .st-ex-row{margin-bottom:6px}
+.piper-explain .st-ex-row:last-child{margin-bottom:0}
+.piper-explain .st-ex-h{font-weight:bold;margin-right:6px}
+.piper-explain .st-ex-chunk{display:block;padding:3px 8px;margin:3px 0;background:#fff;border-left:3px solid #5bc0de;word-break:break-word}
+.piper-explain code{white-space:normal}
+#piper_test_explain:empty,#piper_try_explain:empty{display:none}
+@media (max-width:767px){
+ .piper-head .piper-actions{display:block;margin-top:10px}
+ .piper-head .piper-actions button{margin-left:0!important}
+ .piper-head .piper-status{display:block;margin:12px 0 0!important;line-height:1.6}
+ .piper-head .piper-status>span:not(.piper-actions){display:inline-block;margin:0 10px 0 0!important}
+ .piper-tabs{display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+ .piper-tabs::-webkit-scrollbar{display:none}
+ .piper-tabs>li{float:none;flex:0 0 auto}
+ .piper-tabs>li>a{padding:8px 9px;margin-right:1px;font-size:13px;white-space:nowrap}
+}
+</style>
+<h3 class="piper-head">
     <img src="/img/modules/piper_tts.png" style="width:32px;height:32px;vertical-align:middle;margin-right:8px;">
     <#LANG_PIPER_TTS_TITLE#>
-    <span style="margin-left:12px;font-size:13px;font-weight:normal;">
-        <span id="connect_status_dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:[#if CONNECT_STATUS="1"#]#28a745[#else#]#dc3545[#endif#];vertical-align:middle;margin-right:3px"></span>
-        <span id="connect_status_text" style="vertical-align:middle;">[#if CONNECT_STATUS="1"#]<#LANG_PIPER_TTS_CONNECTED#>[#else#]<#LANG_PIPER_TTS_DISCONNECTED#>[#endif#]</span>
+    <span class="piper-status" style="margin-left:12px;font-size:13px;font-weight:normal;">
+        <span title="<#LANG_PIPER_TTS_TITLE#>">
+            <span id="connect_status_dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:[#if CONNECT_STATUS="1"#]#28a745[#else#]#dc3545[#endif#];vertical-align:middle;margin-right:3px"></span>
+            <span id="connect_status_text" style="vertical-align:middle;">[#if CONNECT_STATUS="1"#]<#LANG_PIPER_TTS_CONNECTED#>[#else#]<#LANG_PIPER_TTS_DISCONNECTED#>[#endif#]</span>
+        </span>
         <span style="margin-left:8px" title="<#LANG_PIPER_TTS_WS_STATUS#>">
             <span id="ws_status_dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:[#if WS_ALIVE="1"#]#28a745[#else#]#dc3545[#endif#];vertical-align:middle;margin-right:3px"></span>
             <span id="ws_status_text" style="vertical-align:middle;">[#if WS_ALIVE="1"#]<#LANG_PIPER_TTS_WS_CONNECTED#>[#else#]<#LANG_PIPER_TTS_WS_DISCONNECTED#>[#endif#]</span>
@@ -12,8 +36,11 @@
 [#if IS_REMOTE=""#][#if ARCH_64="1"#]
         <span style="margin-left:8px">
             <span id="install_status_dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:[#if INSTALL_STATUS="1"#]#28a745[#else#][#if INSTALL_STATUS="2"#]#ffc107[#else#]#dc3545[#endif#][#endif#];vertical-align:middle;margin-right:3px"></span>
-            <span id="install_status_text" style="vertical-align:middle;">[#if INSTALL_STATUS="1"#]<#LANG_PIPER_TTS_INSTALLED_TRUE#>[#else#][#if INSTALL_STATUS="2"#]<#LANG_PIPER_TTS_INSTALLED_PENDING#>[#else#]<#LANG_PIPER_TTS_INSTALLED_FALSE#>[#endif#][#endif#]</span>
-            <button id="install_piper_btn" class="btn btn-success btn-sm" style="margin-left:6px;vertical-align:middle;[#if INSTALL_STATUS="1"#]display:none[#else#][#if INSTALL_STATUS="2"#]display:none[#endif#][#endif#]" onclick="installPiper();return false"><#LANG_PIPER_TTS_INSTALL_PIPER#></button>
+            <span id="install_status_text" style="vertical-align:middle;">[#if INSTALL_STATUS="1"#]<#LANG_PIPER_TTS_INSTALLED_TRUE#>[#else#][#if INSTALL_STATUS="2"#]<#LANG_PIPER_TTS_INSTALLED_PENDING#>[#else#][#if INSTALL_STATUS="3"#]<#LANG_PIPER_TTS_INSTALLED_FAILED#>[#else#]<#LANG_PIPER_TTS_INSTALLED_FALSE#>[#endif#][#endif#][#endif#]</span>
+        </span>
+        <span class="piper-actions">
+            <button id="install_piper_btn" class="btn btn-success btn-sm" style="margin-left:6px;vertical-align:middle;[#if INSTALL_STATUS="1"#][#if INSTALL_UPDATE="1"#][#else#][#if INSTALL_HEALTHY="1"#]display:none[#endif#][#endif#][#else#][#if INSTALL_STATUS="2"#]display:none[#endif#][#endif#]" title="[#if INSTALL_UPDATE="1"#]<#LANG_PIPER_TTS_INSTALLED_VERSION#>: [#INSTALL_VERSION#] → [#INSTALL_LATEST#][#else#][#if INSTALL_HEALTHY=""#][#INSTALL_HEALTH_REASON#][#endif#][#endif#]" onclick="installPiper();return false">[#if INSTALL_STATUS="1"#]<#LANG_PIPER_TTS_UPDATE_PIPER#>[#else#]<#LANG_PIPER_TTS_INSTALL_PIPER#>[#endif#]</button>
+            <a href="#" onclick="piperToggleLog();return false" style="margin-left:6px;font-size:12px"><#LANG_PIPER_TTS_INSTALL_LOG#></a>
         </span>
 [#endif#][#endif#]
     </span>
@@ -21,24 +48,173 @@
         <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#piper_tts_about">О модуле&nbsp;&nbsp;<span class="glyphicon glyphicon-info-sign icon-white"></span></button>
     </span>
 </h3>
+[#if IS_REMOTE=""#][#if ARCH_64="1"#]
+<div id="piper_log_box" style="display:none">
+    <div style="margin-bottom:4px">
+        <button type="button" class="btn btn-default btn-xs" onclick="piperCopyLog();return false"><#LANG_PIPER_TTS_COPY_LOG#></button>
+        <span id="piper_copy_status" style="font-size:12px;margin-left:6px"></span>
+    </div>
+    <pre id="piper_install_log" style="max-height:260px;overflow:auto;font-size:11px;white-space:pre-wrap;word-break:break-all"></pre>
+</div>
+<div id="piper_manual" class="alert alert-danger" style="[#if INSTALL_STATUS="3"#][#else#]display:none[#endif#]"><#LANG_PIPER_TTS_MANUAL_HINT#><br><code style="user-select:all">[#MANUAL_INSTALL#]</code></div>
+[#endif#][#endif#]
 <hr>
 
-<ul class="nav nav-tabs">
+<ul class="nav nav-tabs piper-tabs">
     <li [#if TAB_SETTINGS="1"#]class="active"[#endif#]><a href="?action=piper_tts&tab=settings"><#LANG_PIPER_TTS_SETTINGS#></a></li>
 [#if IS_REMOTE=""#]
     <li [#if TAB_MODELS="1"#]class="active"[#endif#]><a href="?action=piper_tts&tab=models"><#LANG_PIPER_TTS_MODEL_MANAGEMENT#></a></li>
 [#endif#]
+    <li [#if TAB_DICT="1"#]class="active"[#endif#]><a href="?action=piper_tts&tab=dict"><#LANG_PIPER_TTS_DICT_TAB#></a></li>
     <li [#if TAB_HELP="1"#]class="active"[#endif#]><a href="?action=piper_tts&tab=help"><#LANG_PIPER_TTS_HELP#></a></li>
 </ul>
-<br>
-
+<div class="piper-page">
 [#if TAB_SETTINGS="1"#]
     [#inc settings.html#]
 [#endif#]
 [#if TAB_MODELS="1"#]
     [#inc models.html#]
 [#endif#]
+[#if TAB_DICT="1"#]
+    [#inc dictionary.html#]
+[#endif#]
 [#if TAB_HELP="1"#]
     [#inc help.html#]
 [#endif#]
+</div>
 [#inc about.html#]
+<script>
+// Общие помощники вкладок «Словарь» и «Настройки»: кодирование адреса и «Разбор».
+function piperB64(t){return btoa(unescape(encodeURIComponent(String(t)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+function piperEl(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;}
+// «Разбор»: какие свои правила сработали и как фраза будет прочитана.
+function piperExplain(params,box,st){
+ if(st){st.style.color='';st.textContent='…';}
+ var x=new XMLHttpRequest();
+ x.open('GET','/admin.php?action=piper_tts&cmd=test_explain'+params+'&_='+Date.now(),true);
+ x.onload=function(){var r=null;try{r=JSON.parse(x.responseText)}catch(e){}
+  if(!r||!r.ok){if(st){st.style.color='#dc3545';st.textContent='<#LANG_PIPER_TTS_TEST_FAIL#>'+(r&&r.error?': '+r.error:'');}return}
+  if(st)st.textContent='';
+  piperExplainRender(r,box);};
+ x.onerror=function(){if(st){st.style.color='#dc3545';st.textContent='<#LANG_PIPER_TTS_TEST_FAIL#>: HTTP';}};
+ x.send();
+}
+function piperExplainRender(r,box){
+ var E=piperEl;
+ var w=E('div','well well-sm piper-explain');
+ var row=E('div','st-ex-row');row.appendChild(E('span','st-ex-h','<#LANG_PIPER_TTS_EXPLAIN_RULES#>'));
+ if(!r.rules.length)row.appendChild(E('span','','<#LANG_PIPER_TTS_EXPLAIN_NONE#>'));
+ r.rules.forEach(function(h,i){
+  if(i)row.appendChild(document.createTextNode('; '));
+  row.appendChild(E('code','',h.pattern));row.appendChild(document.createTextNode(' → '));
+  row.appendChild(E('code','',h.replacement===''?'∅':h.replacement));
+  if(h.count>1)row.appendChild(document.createTextNode(' ×'+h.count));
+ });
+ w.appendChild(row);
+ if(r.user!==(typeof r.base==='string'?r.base:r.original)){row=E('div','st-ex-row');row.appendChild(E('span','st-ex-h','<#LANG_PIPER_TTS_EXPLAIN_AFTER#>:'));row.appendChild(E('span','',r.user));w.appendChild(row);}
+ row=E('div','st-ex-row');row.appendChild(E('div','st-ex-h','<#LANG_PIPER_TTS_EXPLAIN_READ#>:'));
+ r.chunks.forEach(function(c){row.appendChild(E('span','st-ex-chunk',c.text));});
+ w.appendChild(row);
+ box.innerHTML='';box.appendChild(w);
+}
+function piperSetDot(dotId,textId,color,textColor,text){
+ var d=document.getElementById(dotId),t=document.getElementById(textId);
+ if(!d||!t)return;
+ d.style.background=color;t.style.color=textColor;t.textContent=text;
+}
+function installPiper(){
+ if(!confirm('<#LANG_PIPER_TTS_CONFIRM_INSTALL_PIPER#>'))return;
+ var btn=document.getElementById('install_piper_btn');
+ if(btn)btn.style.display='none';
+ piperLogUserClosed=false;
+ var x=new XMLHttpRequest();
+ x.open('GET','/admin.php?action=piper_tts&cmd=install_piper',true);
+ x.send();
+ setTimeout(piperShowLog,1500);
+}
+var piperLogTimer=null,piperLogUserClosed=false;
+// «Журнал установки»: первое нажатие раскрывает, повторное — сворачивает.
+function piperToggleLog(){
+ var box=document.getElementById('piper_log_box');
+ if(box.style.display!=='none'){
+  box.style.display='none';
+  if(piperLogTimer){clearInterval(piperLogTimer);piperLogTimer=null;}
+  piperLogUserClosed=true;
+ }else{
+  piperLogUserClosed=false;
+  piperShowLog();
+ }
+}
+function piperShowLog(){
+ var el=document.getElementById('piper_install_log');
+ document.getElementById('piper_log_box').style.display='';
+ function load(){
+  var x=new XMLHttpRequest();
+  x.open('GET','/admin.php?action=piper_tts&cmd=install_log',true);
+  x.onload=function(){if(x.status==200){el.textContent=x.responseText||'—';el.scrollTop=el.scrollHeight;}};
+  x.send();
+ }
+ load();
+ if(!piperLogTimer)piperLogTimer=setInterval(load,3000);
+}
+function piperCopyLog(){
+ var text=document.getElementById('piper_install_log').textContent||'';
+ var st=document.getElementById('piper_copy_status');
+ function done(ok){st.style.color=ok?'#28a745':'#dc3545';st.textContent=ok?'<#LANG_PIPER_TTS_COPIED#>':'<#LANG_PIPER_TTS_COPY_FAILED#>';setTimeout(function(){st.textContent='';},2500);}
+ function fallback(){
+  var ta=document.createElement('textarea');
+  ta.value=text;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.top='-1000px';
+  document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,text.length);
+  var ok=false;try{ok=document.execCommand('copy');}catch(e){}
+  document.body.removeChild(ta);done(ok);
+ }
+ if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(function(){done(true);},fallback);}
+ else fallback();
+}
+setInterval(function(){
+ var x=new XMLHttpRequest();
+ x.open('GET','/admin.php?action=piper_tts&cmd=check_piper_status',true);
+ x.onload=function(){
+  if(x.status!=200)return;
+  try{var r=JSON.parse(x.responseText)}catch(e){return}
+  if(r.connect=='connected'){
+   piperSetDot('connect_status_dot','connect_status_text','#28a745','#28a745','<#LANG_PIPER_TTS_CONNECTED#>');
+  }else{
+   piperSetDot('connect_status_dot','connect_status_text','#dc3545','#dc3545','<#LANG_PIPER_TTS_DISCONNECTED#>');
+  }
+  // Синтез и доставка — независимые вещи: зелёная точка Piper не означает,
+  // что аудио дойдёт до вкладки, если WebSocket-сервер не поднят.
+  if(r.ws=='connected'){
+   piperSetDot('ws_status_dot','ws_status_text','#28a745','#28a745','<#LANG_PIPER_TTS_WS_CONNECTED#>');
+  }else{
+   piperSetDot('ws_status_dot','ws_status_text','#dc3545','#dc3545','<#LANG_PIPER_TTS_WS_DISCONNECTED#>');
+  }
+  var ib=document.getElementById('install_piper_btn');
+  var mh=document.getElementById('piper_manual');
+  if(r.install=='installed'){
+   piperSetDot('install_status_dot','install_status_text','#28a745','#28a745','<#LANG_PIPER_TTS_INSTALLED_TRUE#>');
+   // Кнопку обновления показываем только при новой версии движка или
+   // если локальный Piper перестал запускаться.
+   if(ib){
+    var needUpdate=(r.update===true||r.update===1||r.update=='1')||!(r.healthy===true||r.healthy===1||r.healthy=='1');
+    if(needUpdate){ib.style.display='';ib.textContent='<#LANG_PIPER_TTS_UPDATE_PIPER#>';}
+    else ib.style.display='none';
+   }
+   if(mh)mh.style.display='none';
+  }else if(r.install=='failed'){
+   piperSetDot('install_status_dot','install_status_text','#dc3545','#dc3545','<#LANG_PIPER_TTS_INSTALLED_FAILED#>');
+   if(ib){ib.style.display='';ib.textContent='<#LANG_PIPER_TTS_INSTALL_PIPER#>';}
+   if(mh)mh.style.display='';
+   if(!piperLogTimer&&!piperLogUserClosed)piperShowLog();
+  }else if(r.install=='installing'){
+   piperSetDot('install_status_dot','install_status_text','#ffc107','#856404','<#LANG_PIPER_TTS_INSTALLED_PENDING#>');
+   if(ib)ib.style.display='none';
+   if(!piperLogTimer&&!piperLogUserClosed)piperShowLog();
+  }else{
+   piperSetDot('install_status_dot','install_status_text','#dc3545','#dc3545','<#LANG_PIPER_TTS_INSTALLED_FALSE#>');
+   if(ib){ib.style.display='';ib.textContent='<#LANG_PIPER_TTS_INSTALL_PIPER#>';}
+  }
+ };
+ x.send();
+},3000);
+</script>

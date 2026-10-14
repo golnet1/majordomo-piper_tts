@@ -1,0 +1,225 @@
+<style>
+#piper_dict td,#piper_dict th{vertical-align:middle}
+#piper_dict td.st-txt{word-break:break-word}
+#piper_dict tr.st-off td.st-txt{color:#999;text-decoration:line-through}
+#piper_dict tr.st-bad td.st-txt{color:#c9302c}
+#piper_dict .st-act{white-space:nowrap;text-align:right}
+#piper_dict .st-act .btn{padding:2px 7px}
+#piper_dict .st-ord .btn{padding:0 5px;line-height:1.2;display:block}
+#piper_dict .st-type{font-size:12px;color:#666;white-space:nowrap}
+#piper_dict .st-note{font-size:12px;color:#666}
+/* Таблица словаря: 10 строк, дальше — прокрутка; шапка закреплена. */
+#piper_dict_scroll{max-width:100%;overflow:auto;border-bottom:1px solid #e5e5e5}
+#piper_dict_scroll thead th{position:sticky;top:0;background:#fff;z-index:2;box-shadow:inset 0 -1px 0 #ddd}
+#piper_rule_form{display:grid;grid-template-columns:1fr 1fr 190px;gap:8px;align-items:center}
+#piper_rule_form .st-wide{grid-column:1/-1}
+#piper_rule_form .st-btns{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+@media (max-width:767px){
+ #piper_dict .st-hide-xs{display:none}
+ #piper_rule_form{grid-template-columns:1fr}
+}
+</style>
+<fieldset>
+ <legend><#LANG_PIPER_TTS_DICT_TAB#></legend>
+ <p><#LANG_PIPER_TTS_DICT_INTRO#></p>
+[#if IMPORT_DONE="1"#]
+ [#if IMPORT_FAILED!=""#]
+ <div class="alert alert-danger"><#LANG_PIPER_TTS_IMPORT_FAILED#>: [#IMPORT_FAILED#]</div>
+ [#else#]
+ <div class="alert alert-success" id="piper_import_result"></div>
+ <script>(function(){var e=document.getElementById('piper_import_result');e.textContent='<#LANG_PIPER_TTS_IMPORT_RESULT#>'.replace('%a','[#IMPORT_ADDED#]').replace('%s','[#IMPORT_SKIPPED#]');})();</script>
+ [#endif#]
+ [#if IMPORT_ERRORS!=""#]
+ <div class="alert alert-warning"><#LANG_PIPER_TTS_IMPORT_ERRORS#><pre style="margin:6px 0 0;white-space:pre-wrap">[#IMPORT_ERRORS#]</pre></div>
+ [#endif#]
+[#endif#]
+
+ <div class="piper-dict-scroll" id="piper_dict_scroll"><table class="table table-condensed" id="piper_dict">
+  <thead>
+   <tr>
+    <th style="width:28px"></th>
+    <th style="width:40px" title="<#LANG_PIPER_TTS_DICT_ON#>"><#LANG_PIPER_TTS_DICT_ON#></th>
+    <th><#LANG_PIPER_TTS_DICT_WHAT#></th>
+    <th><#LANG_PIPER_TTS_DICT_HOW#></th>
+    <th class="st-hide-xs"><#LANG_PIPER_TTS_DICT_TYPE#></th>
+    <th class="st-hide-xs"><#LANG_PIPER_TTS_DICT_NOTE#></th>
+    <th></th>
+   </tr>
+  </thead>
+  <tbody id="piper_dict_body"><tr><td colspan="7">…</td></tr></tbody>
+ </table></div>
+
+ <div class="well well-sm" id="piper_rule_box">
+  <div id="piper_rule_form">
+   <input type="text" class="form-control" id="sr_pattern" maxlength="255" placeholder="<#LANG_PIPER_TTS_DICT_WHAT#>">
+   <input type="text" class="form-control" id="sr_replacement" maxlength="255" placeholder="<#LANG_PIPER_TTS_DICT_HOW#>">
+   <select class="form-control" id="sr_type">
+    <option value="word"><#LANG_PIPER_TTS_DICT_TYPE_WORD#></option>
+    <option value="text"><#LANG_PIPER_TTS_DICT_TYPE_TEXT#></option>
+    <option value="regex"><#LANG_PIPER_TTS_DICT_TYPE_REGEX#></option>
+   </select>
+   <input type="text" class="form-control st-wide" id="sr_note" maxlength="255" placeholder="<#LANG_PIPER_TTS_DICT_NOTE#>">
+   <div class="st-btns">
+    <label style="font-weight:normal;margin:0 10px 0 0;cursor:pointer"><input type="checkbox" id="sr_cs" style="margin:0 5px 0 0;vertical-align:-2px"><#LANG_PIPER_TTS_DICT_CASE#></label>
+    <button type="button" class="btn btn-default" onclick="piperRulePlayForm();return false" title="<#LANG_PIPER_TTS_DICT_PLAY_HOW#>"><span class="glyphicon glyphicon-volume-up"></span></button>
+    <button type="button" class="btn btn-success" id="sr_submit" onclick="piperRuleSubmit();return false"><span class="glyphicon glyphicon-plus"></span> <span id="sr_submit_label"><#LANG_PIPER_TTS_DICT_ADD#></span></button>
+    <button type="button" class="btn btn-default" id="sr_cancel" style="display:none" onclick="piperRuleReset();return false"><#LANG_PIPER_TTS_DICT_CANCEL#></button>
+    <span id="sr_status" style="margin-left:4px"></span>
+   </div>
+  </div>
+  <span class="help-block" style="margin-bottom:0"><#LANG_PIPER_TTS_DICT_HELP#></span>
+ </div>
+
+ <h4><#LANG_PIPER_TTS_DICT_TRY#></h4>
+ <div style="display:flex;gap:6px;flex-wrap:wrap">
+  <input type="text" class="form-control" id="piper_try" style="flex:1 1 300px" value="Умный дом: на кухне 23°C, влажность 45%.">
+  <button type="button" class="btn btn-default" onclick="piperDictPlay(document.getElementById('piper_try').value,document.getElementById('piper_try_status'));return false"><span class="glyphicon glyphicon-volume-up"></span> <#LANG_PIPER_TTS_DICT_PLAY#></button>
+  <button type="button" class="btn btn-default" onclick="piperExplain('&t64='+piperB64(document.getElementById('piper_try').value),document.getElementById('piper_try_explain'),document.getElementById('piper_try_status'));return false"><span class="glyphicon glyphicon-search"></span> <#LANG_PIPER_TTS_EXPLAIN#></button>
+ </div>
+ <span id="piper_try_status" style="display:inline-block;margin-top:4px"></span>
+ <span class="help-block"><#LANG_PIPER_TTS_DICT_TRY_HINT#></span>
+ <div id="piper_try_explain"></div>
+
+ <h4 style="margin-top:20px"><#LANG_PIPER_TTS_IO_TITLE#></h4>
+ <p><a href="?action=piper_tts&cmd=dict_export" class="btn btn-default"><span class="glyphicon glyphicon-download-alt"></span> <#LANG_PIPER_TTS_EXPORT_BTN#></a></p>
+ <form action="?" method="post" enctype="multipart/form-data" name="frmImport" onsubmit="return piperImportCheck(this)">
+  <input type="hidden" name="tab" value="dict">
+  <input type="hidden" name="view_mode" value="dict_import">
+  <input type="file" name="dict_file" accept=".txt,.tsv,.csv,text/plain" required style="margin-bottom:8px">
+  <div class="radio" style="margin-top:0"><label><input type="radio" name="import_mode" value="add" checked> <#LANG_PIPER_TTS_IMPORT_ADD#></label></div>
+  <div class="radio"><label><input type="radio" name="import_mode" value="replace"> <#LANG_PIPER_TTS_IMPORT_REPLACE#></label></div>
+  <button type="submit" class="btn btn-primary"><span class="glyphicon glyphicon-upload"></span> <#LANG_PIPER_TTS_IMPORT_BTN#></button>
+  <span class="help-block"><#LANG_PIPER_TTS_IMPORT_HINT#></span>
+ </form>
+</fieldset>
+
+<script>
+var piperDict=[],piperRuleEdit=0,piperPlayAudio=null;
+var PIPER_RULE_TYPES={word:'<#LANG_PIPER_TTS_DICT_TYPE_WORD#>',text:'<#LANG_PIPER_TTS_DICT_TYPE_TEXT#>',regex:'<#LANG_PIPER_TTS_DICT_TYPE_REGEX#>'};
+function piperHttpErr(x){var b=String(x.responseText||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').replace(/^\s+|\s+$/g,'');
+ return 'HTTP '+x.status+(b?' '+b.substring(0,300):'');}
+function piperDictCall(q,cb){
+ var x=new XMLHttpRequest();
+ x.open('GET','/admin.php?action=piper_tts&cmd='+q+'&_='+Date.now(),true);
+ x.onload=function(){var r=null;try{r=JSON.parse(x.responseText)}catch(e){}
+  if(!r){cb({ok:false,error:piperHttpErr(x)});return}
+  if(r.rules)piperDictRender(r);
+  cb(r);};
+ x.onerror=function(){cb({ok:false,error:'HTTP'});};
+ x.send();
+}
+// ▶ в словаре: сервер синтезирует фразу выбранным голосом с учётом правил.
+function piperDictPlay(text,st){
+ if(!/\S/.test(text||''))return;
+ if(st){st.style.color='';st.textContent='…';}
+ var x=new XMLHttpRequest();
+ x.open('GET','/admin.php?action=piper_tts&cmd=test_say&t64='+piperB64(text)+'&_='+Date.now(),true);
+ x.onload=function(){var r=null;try{r=JSON.parse(x.responseText)}catch(e){}
+  if(!r||!r.ok){if(st){st.style.color='#dc3545';st.textContent='<#LANG_PIPER_TTS_TEST_FAIL#>'+(r&&r.error?': '+r.error:'');}return}
+  if(st)st.textContent='';
+  if(piperPlayAudio)piperPlayAudio.pause();
+  piperPlayAudio=new Audio(r.audio);
+  var pr=piperPlayAudio.play();
+  if(pr&&pr.catch)pr.catch(function(){if(st){st.style.color='#dc3545';st.textContent='<#LANG_PIPER_TTS_TEST_FAIL#>: '+r.audio;}});};
+ x.onerror=function(){if(st){st.style.color='#dc3545';st.textContent='<#LANG_PIPER_TTS_TEST_FAIL#>: HTTP';}};
+ x.send();
+}
+function piperBtn(icon,title,cls,fn){var b=piperEl('button','btn btn-xs '+(cls||'btn-default'));b.type='button';b.title=title;
+ var s=piperEl('span','glyphicon glyphicon-'+icon);b.appendChild(s);b.onclick=function(ev){ev.preventDefault();fn();return false;};return b;}
+function piperDictRender(r){
+ piperDict=r.rules;
+ var tb=document.getElementById('piper_dict_body');tb.innerHTML='';
+ if(!r.rules.length){var tr=piperEl('tr'),td=piperEl('td','',"<#LANG_PIPER_TTS_DICT_EMPTY#>");td.colSpan=7;td.style.color='#777';tr.appendChild(td);tb.appendChild(tr);}
+ r.rules.forEach(function(x,i){
+  var tr=piperEl('tr',(x.active?'':'st-off')+(x.valid?'':' st-bad'));
+  var o=piperEl('td','st-ord');
+  if(i>0)o.appendChild(piperBtn('chevron-up','<#LANG_PIPER_TTS_DICT_UP#>','btn-link',function(){piperDictCall('rule_move&dir=up&id='+x.id,function(){});}));
+  if(i<r.rules.length-1)o.appendChild(piperBtn('chevron-down','<#LANG_PIPER_TTS_DICT_DOWN#>','btn-link',function(){piperDictCall('rule_move&dir=down&id='+x.id,function(){});}));
+  tr.appendChild(o);
+  var c=piperEl('td'),cb=document.createElement('input');cb.type='checkbox';cb.checked=!!x.active;cb.style.margin='0';
+  cb.onchange=function(){piperDictCall('rule_toggle&id='+x.id+'&active='+(cb.checked?1:0),function(){});};
+  c.appendChild(cb);tr.appendChild(c);
+  var p=piperEl('td','st-txt');var code=piperEl('code','',x.pattern);p.appendChild(code);
+  if(x.cs)p.appendChild(piperEl('span','st-type',' Aa'));
+  if(!x.valid)p.title='<#LANG_PIPER_TTS_DICT_INVALID#>';
+  tr.appendChild(p);
+  tr.appendChild(piperEl('td','st-txt',x.replacement===''?'—':x.replacement));
+  tr.appendChild(piperEl('td','st-type st-hide-xs',PIPER_RULE_TYPES[x.type]||x.type));
+  tr.appendChild(piperEl('td','st-note st-hide-xs',x.note));
+  var a=piperEl('td','st-act');
+  a.appendChild(piperBtn('volume-up','<#LANG_PIPER_TTS_DICT_PLAY#>','btn-default',function(){piperDictPlay(piperRuleExample(x),document.getElementById('sr_status'));}));
+  a.appendChild(document.createTextNode(' '));
+  a.appendChild(piperBtn('pencil','<#LANG_PIPER_TTS_DICT_EDIT#>','btn-default',function(){piperRuleLoad(x);}));
+  a.appendChild(document.createTextNode(' '));
+  a.appendChild(piperBtn('remove','<#LANG_PIPER_TTS_DICT_DELETE#>','btn-danger',function(){
+   if(!confirm('<#LANG_PIPER_TTS_DICT_CONFIRM_DELETE#>'.replace('%s',x.pattern)))return;
+   piperDictCall('rule_delete&id='+x.id,function(){if(piperRuleEdit==x.id)piperRuleReset();});}));
+  tr.appendChild(a);
+  tb.appendChild(tr);
+ });
+ piperDictFit();
+}
+// Таблица словаря: 10 строк, дальше — прокрутка (шапка при этом закреплена).
+function piperDictFit(){
+ var w=document.getElementById('piper_dict_scroll'),tb=document.getElementById('piper_dict_body'),t=document.getElementById('piper_dict');
+ if(!w||!tb||!t)return;
+ w.style.maxHeight='';
+ if(tb.rows.length<=10)return;
+ var h=(t.tHead?t.tHead.offsetHeight:0);
+ for(var i=0;i<10&&i<tb.rows.length;i++)h+=tb.rows[i].offsetHeight;
+ w.style.maxHeight=h+'px';
+}
+window.addEventListener('resize',piperDictFit);
+// Пример для ▶ у правила: слово без «*», у регулярного выражения — замена.
+function piperRuleExample(x){
+ if(x.type==='word')return x.pattern.replace(/\*+$/,'');
+ if(x.type==='text')return x.pattern;
+ return x.replacement.replace(/\$\d+/g,'');
+}
+function piperRuleStatus(msg,bad){var s=document.getElementById('sr_status');s.style.color=bad?'#dc3545':'#28a745';s.textContent=msg||'';
+ if(!bad&&msg)setTimeout(function(){if(s.textContent===msg)s.textContent='';},2500);}
+function piperRuleLoad(x){
+ piperRuleEdit=x.id;
+ document.getElementById('sr_pattern').value=x.pattern;
+ document.getElementById('sr_replacement').value=x.replacement;
+ document.getElementById('sr_type').value=x.type;
+ document.getElementById('sr_note').value=x.note;
+ document.getElementById('sr_cs').checked=!!x.cs;
+ document.getElementById('sr_submit_label').textContent='<#LANG_PIPER_TTS_DICT_SAVE#>';
+ document.getElementById('sr_cancel').style.display='';
+ document.getElementById('piper_rule_box').scrollIntoView({behavior:'smooth',block:'center'});
+ document.getElementById('sr_pattern').focus();
+}
+function piperRuleReset(){
+ piperRuleEdit=0;
+ ['sr_pattern','sr_replacement','sr_note'].forEach(function(i){document.getElementById(i).value='';});
+ document.getElementById('sr_type').value='word';document.getElementById('sr_cs').checked=false;
+ document.getElementById('sr_submit_label').textContent='<#LANG_PIPER_TTS_DICT_ADD#>';
+ document.getElementById('sr_cancel').style.display='none';
+}
+function piperRuleSubmit(){
+ var p=document.getElementById('sr_pattern').value,r=document.getElementById('sr_replacement').value;
+ var q='rule_save&id='+piperRuleEdit+'&lang=ru&type='+document.getElementById('sr_type').value+
+  '&p='+piperB64(p)+'&r='+piperB64(r)+'&n='+piperB64(document.getElementById('sr_note').value)+
+  '&cs='+(document.getElementById('sr_cs').checked?1:0);
+ piperDictCall(q,function(res){
+  if(!res.ok){piperRuleStatus(res.error,true);return}
+  piperRuleStatus('✓',false);piperRuleReset();
+ });
+}
+// ▶ в форме: как прозвучит замена (для «Слова» — без «*»).
+function piperRulePlayForm(){
+ var r=document.getElementById('sr_replacement').value.replace(/\*/g,'').replace(/\$\d+/g,'');
+ if(!/\S/.test(r))r=document.getElementById('sr_pattern').value.replace(/\*+$/,'');
+ piperDictPlay(r,document.getElementById('sr_status'));
+}
+function piperImportCheck(f){
+ var m=f.querySelector('input[name=import_mode]:checked');
+ if(m&&m.value==='replace')return confirm('<#LANG_PIPER_TTS_IMPORT_CONFIRM_REPLACE#>');
+ return true;
+}
+piperDictCall('rules_list',function(r){if(!r.ok)piperRuleStatus(r.error,true);});
+document.getElementById('sr_pattern').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();piperRuleSubmit();}});
+document.getElementById('sr_replacement').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();piperRuleSubmit();}});
+document.getElementById('piper_try').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();piperDictPlay(this.value,document.getElementById('piper_try_status'));}});
+</script>

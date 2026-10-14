@@ -1,3 +1,24 @@
+<h4>Что нового в версии 1.2.1</h4>
+<div class="panel-group" id="pt_help_new_accordion">
+
+    <div class="panel panel-success">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_new_accordion" href="#pt_help_new">Список изменений</a>
+        </div>
+        <div class="panel-body collapse in" id="pt_help_new">
+            <ul>
+                <li><strong>Вкладка «Словарь»</strong> — свой словарь чтения: слова, фразы, регулярные выражения; порядок применения, включение/выключение, прослушивание и импорт/экспорт. При первой установке таблица заполняется примерами (единицы измерения, часовые пояса, служебные знаки).</li>
+                <li><strong>Блок «Проверка» на вкладке «Настройки»</strong> — поле с фразой и кнопки <strong>«Проверить»</strong> (озвучить прямо в админке) и <strong>«Разбор»</strong> (какие правила сработали и как текст будет прочитан).</li>
+                <li><strong>Нормализация текста</strong> — числа и единицы измерения с правильными русскими окончаниями, диапазоны «от … до …», математические знаки, знак номера, часовые пояса. Подробности — в разделе «Нормализация текста» ниже.</li>
+                <li><strong>Числа обрабатываются раньше словаря</strong> — правило вроде «м/с» больше не ломает склонение числа («1,5 м/с» → «полтора метра в секунду»), а «UTC» не отрезает знак смещения («UTC+3» → «по москве»).</li>
+                <li><strong>Кнопка «Обновить Piper»</strong> — показывается только когда доступна новая версия движка или Piper не запускается; пока всё работает, устанавливать нечего.</li>
+                <li><strong>Кэш учитывает словарь и версию обработки</strong> — при изменении правил или логики нормализации повторная фраза синтезируется заново.</li>
+            </ul>
+        </div>
+    </div>
+
+</div>
+
 <h4>Описание настроек</h4>
 <div class="panel-group" id="pt_help_accordion">
 
@@ -126,6 +147,27 @@
 
     <div class="panel panel-info">
         <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_accordion" href="#pt_help_test">Проверка</a>
+        </div>
+        <div class="panel-body collapse" id="pt_help_test">
+            <dl class="dl-horizontal">
+                <dt>Назначение</dt>
+                <dd>Быстрая проверка произношения прямо в настройках — сохранять настройки не обязательно. Голос, скорость и пауза берутся из полей выше на этой же странице.</dd>
+
+                <dt>Фраза</dt>
+                <dd>Текст для проверки. Удобно вставить фразу с числами, единицами, часовыми поясами и знаками, чтобы увидеть, как модуль её прочитает.</dd>
+
+                <dt>Проверить</dt>
+                <dd>Озвучивает фразу в браузере (в админке) выбранным голосом с учётом словаря. Ничего на устройства умного дома не отправляется.</dd>
+
+                <dt>Разбор</dt>
+                <dd>Показывает, какие правила словаря сработали, текст после них и итоговое чтение — уже после нормализации чисел, единиц и часовых поясов.</dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
             <a data-toggle="collapse" data-parent="#pt_help_accordion" href="#pt_help_cache">Кэш</a>
         </div>
         <div class="panel-body collapse" id="pt_help_cache">
@@ -177,6 +219,121 @@
                 <dt>Доступные голоса</dt>
                 <dd>Список предопределён: <strong>irina</strong>, <strong>denis</strong>, <strong>dmitri</strong>, <strong>ruslan</strong>, <strong>luka</strong>. Все доступны в качестве <strong>medium</strong>.</dd>
             </dl>
+        </div>
+    </div>
+
+</div>
+
+<h4>Словарь произношения</h4>
+<div class="panel-group" id="pt_help_dict_accordion">
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_dict_accordion" href="#pt_help_dict_intro">О словаре</a>
+        </div>
+        <div class="panel-body collapse in" id="pt_help_dict_intro">
+            <p>Вкладка <strong>«Словарь»</strong> задаёт свой порядок чтения: как произносить слова, сокращения, названия устройств, комнат и брендов. Правила применяются к тексту перед синтезом по порядку сверху вниз, поэтому ими можно поменять и встроенное чтение (например, «Wi-Fi»).</p>
+            <p>При первой установке таблица заполняется примерами: единицы измерения (<code>км/ч</code>, <code>м/с</code>), часовые пояса (<code>UTC</code>, <code>GMT</code>, <code>MSK</code>, <code>EDT</code>…, <code>AEST</code>), <code>МСК</code> и служебные знаки (<code>* # @ $ ^ &amp; \ / | _ " « » &lt; &gt; [ ] { }</code>), которые просто вырезаются из текста. Примеры можно править и удалять.</p>
+            <p>Примеры создаются только один раз, при пустой таблице. Если правила уже есть, модуль их не трогает.</p>
+        </div>
+    </div>
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_dict_accordion" href="#pt_help_dict_rules">Типы правил</a>
+        </div>
+        <div class="panel-body collapse" id="pt_help_dict_rules">
+            <dl class="dl-horizontal">
+                <dt>Слово или фраза</dt>
+                <dd>Совпадает целое слово: <code>MQTT</code> → «эм ку ти ти». Звёздочка в конце — все формы слова: <code>портфел*</code> → «п+ортфел*» (портфель, портфеля, портфелями…); «*» в замене подставляет окончание найденного слова.</dd>
+
+                <dt>Любой текст</dt>
+                <dd>Совпадает и внутри слов, и для отдельных знаков: <code>№</code> → «номер ».</dd>
+
+                <dt>Регулярное выражение</dt>
+                <dd>PCRE без ограничителей; в замене доступны <code>$1</code>, <code>$2</code>: <code>\bESP(\d+)</code> → «и эс пи $1».</dd>
+
+                <dt>Ударение</dt>
+                <dd>В замене — «+» перед ударной гласной (<code>д+ома</code>) или одна заглавная гласная (<code>домА</code>).</dd>
+
+                <dt>Регистр</dt>
+                <dd>Без галочки «Учитывать регистр» регистр не важен, а заглавная первая буква найденного слова переносится на замену. Кнопка <span class="glyphicon glyphicon-volume-up"></span> проигрывает, как прозвучит замена.</dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_dict_accordion" href="#pt_help_dict_order">Порядок и приоритет</a>
+        </div>
+        <div class="panel-body collapse" id="pt_help_dict_order">
+            <p>Фраза обрабатывается по шагам:</p>
+            <ol>
+                <li><strong>Числа и единицы</strong> — «~» → «примерно», «1,5 м/с» → «полтора метра в секунду», «+3°C» → «плюс 3 градуса», смещения «UTC+3» → «по москве».</li>
+                <li><strong>Ваш словарь</strong> — все правила вкладки «Словарь» по порядку.</li>
+                <li><strong>Остальная нормализация и очистка</strong> — диапазоны, знаки, часовые пояса без смещения, удаление служебных символов.</li>
+            </ol>
+            <p>Числа обрабатываются <b>раньше</b> словаря. Поэтому правило «м/с → метров в секунду» не мешает правильному склонению числа в «1,5 м/с», а правило «UTC → по гринвичу» не отрезает знак смещения в «UTC+3». При этом такие правила продолжают работать для сокращений без числа («сильный ветер, м/с»).</p>
+            <p>Правила применяются сверху вниз — стрелками ↑/↓ можно менять порядок. Переключатель «Вкл.» временно отключает правило, а кнопка <span class="glyphicon glyphicon-volume-up"></span> проигрывает пример правила.</p>
+        </div>
+    </div>
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_dict_accordion" href="#pt_help_dict_io">Импорт и экспорт</a>
+        </div>
+        <div class="panel-body collapse" id="pt_help_dict_io">
+            <p>Кнопка <strong>«Экспорт в файл»</strong> выгружает все правила (колонки: что, как читать, тип, регистр, вкл, язык, комментарий).</p>
+            <p><strong>Импорт</strong> принимает текстовый файл (UTF-8 или Windows-1251): подойдёт выгрузка кнопкой «Экспорт» или простой список «что = как читать» — такие строки станут правилами типа «Слово или фраза». Строки, начинающиеся с <code>#</code>, пропускаются.</p>
+            <p>Режим <strong>«Добавить к имеющимся»</strong> пропускает уже существующие правила, режим <strong>«Заменить все правила»</strong> сначала очищает словарь.</p>
+        </div>
+    </div>
+
+</div>
+
+<h4>Нормализация текста</h4>
+<div class="panel-group" id="pt_help_norm_accordion">
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_norm_accordion" href="#pt_help_norm_units">Числа и единицы</a>
+        </div>
+        <div class="panel-body collapse in" id="pt_help_norm_units">
+            <table class="table table-bordered" style="width:auto">
+                <tr><td><code>+9°C</code></td><td>плюс 9 градусов</td></tr>
+                <tr><td><code>1,5 м/с</code></td><td>полтора метра в секунду</td></tr>
+                <tr><td><code>90 км/ч</code></td><td>90 километров в час</td></tr>
+                <tr><td><code>86%</code></td><td>86 процентов</td></tr>
+                <tr><td><code>745 мм рт.ст.</code></td><td>745 миллиметров ртутного столба</td></tr>
+                <tr><td><code>~86%</code></td><td>примерно 86 процентов</td></tr>
+            </table>
+            <p>Числа с единицей получают правильную форму (1 метр — 2 метра — 5 метров). Целые числа остаются цифрами — их читает сам Piper; десятичные дроби («1,5») раскрываются словами.</p>
+        </div>
+    </div>
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_norm_accordion" href="#pt_help_norm_range">Диапазоны и знаки</a>
+        </div>
+        <div class="panel-body collapse" id="pt_help_norm_range">
+            <table class="table table-bordered" style="width:auto">
+                <tr><td><code>+8…+11°</code></td><td>от плюс восьми до плюс одиннадцати градусов</td></tr>
+                <tr><td><code>5-10</code></td><td>от пяти до десяти</td></tr>
+                <tr><td><code>№5</code></td><td>номер 5</td></tr>
+                <tr><td><code>2 = 2</code></td><td>2 равно 2</td></tr>
+                <tr><td><code>a = b</code></td><td>a равняется b</td></tr>
+            </table>
+            <p>Тире между числами и между словами читается как «от … до …»; многоточие «…» и «...» — тоже. Знаки <code>≠</code>, <code>≤</code>, <code>≥</code>, <code>±</code> читаются как «не равно», «меньше или равно», «больше или равно», «плюс-минус». Числа внутри «от … до …» ставятся в родительный падеж (от одного до трёх).</p>
+        </div>
+    </div>
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#pt_help_norm_accordion" href="#pt_help_norm_tz">Часовые пояса</a>
+        </div>
+        <div class="panel-body collapse" id="pt_help_norm_tz">
+            <p>Смещения читаются по городу: <code>UTC+3</code> → «по москве», <code>UTC-5</code> → «по чикаго».</p>
+            <p>Аббревиатуры без смещения (<code>UTC</code>, <code>GMT</code>, <code>MSK</code>, <code>EDT</code>, <code>EST</code>, <code>PDT</code>, <code>PST</code>, <code>CET</code>, <code>CEST</code>, <code>EET</code>, <code>EEST</code>, <code>BST</code>, <code>IST</code>, <code>JST</code>, <code>KST</code>, <code>AWST</code>, <code>ACST</code>, <code>AEST</code> и др.) читаются как «по …». Их можно изменить или дополнить своими правилами на вкладке «Словарь» (например, <code>МСК</code> → «по москве»).</p>
         </div>
     </div>
 
