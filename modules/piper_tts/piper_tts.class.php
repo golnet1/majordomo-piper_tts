@@ -960,7 +960,7 @@ class piper_tts extends module
             $out['IMPORT_FAILED'] = $this->e(base64_decode(strtr((string)gr('ifail'), '-_', '+/')) ?: '');
         }
         $out['TAB_HELP'] = ($tab == 'help') ? '1' : '0';
-        $out['VERSION'] = '1.2.1';
+        $out['VERSION'] = '1.2.2';
 
         if ($this->view_mode == 'dict_import') {
             $this->redirect('?action=piper_tts&tab=dict&' . $this->importDict());

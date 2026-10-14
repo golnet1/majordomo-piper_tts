@@ -1,7 +1,71 @@
 (function () {
+  if (window.__piperPlayerLoaded) return;
+  window.__piperPlayerLoaded = true;
+
   var ws = null;
   var host = window.location.hostname;
   var port = window.PIPER_WS_PORT || 8001;
+
+  // Озвучка не должна дублироваться, когда страница открыта в нескольких
+  // вкладках или окнах одного браузера. Фоновые вкладки и так молчат:
+  // visibilitychange рвёт их сокет. Но два видимых окна рядом оба получают
+  // событие и играют одновременно. Поэтому страницы договариваются через
+  // localStorage (он общий для всех вкладок и окон одного браузера): каждая
+  // пишет метку со временем последнего фокуса, а играет только самая свежая
+  // из видимых. Если браузер вообще без фокуса, продолжает говорить последнее
+  // активное окно - так объявления не теряются.
+  var HB_MS = 1000;
+  var HB_ALIVE_MS = 3000;
+  var HB_PREFIX = 'piper_tts_hb:';
+  var myId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  var lastFocusAt = Date.now();
+
+  function beat() {
+    if (document.hasFocus()) lastFocusAt = Date.now();
+    try {
+      localStorage.setItem(HB_PREFIX + myId, JSON.stringify({
+        id: myId, focus: lastFocusAt, hidden: document.hidden ? 1 : 0, seen: Date.now()
+      }));
+    } catch (e) {}
+  }
+
+  // Играть ли эту фразу: только самая свежая по фокусу видимая страница.
+  // Все страницы читают один и тот же набор меток, поэтому выбор совпадает;
+  // при равном фокусе роль забирает больший id - так решается и случай, если
+  // скрипт в одной странице подключён дважды.
+  function amISpeaker() {
+    beat();
+    var now = Date.now();
+    var keys = [];
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf(HB_PREFIX) === 0) keys.push(k);
+      }
+    } catch (e) {
+      return true; // нет localStorage - ведём себя как раньше
+    }
+    var best = null;
+    for (var j = 0; j < keys.length; j++) {
+      var v = null;
+      try { v = JSON.parse(localStorage.getItem(keys[j])); } catch (e) { v = null; }
+      if (!v || now - (v.seen || 0) > HB_ALIVE_MS) {
+        try { localStorage.removeItem(keys[j]); } catch (e) {}
+        continue;
+      }
+      if (v.hidden) continue; // фоновые вкладки не претендуют
+      if (!best || v.focus > best.focus ||
+          (v.focus === best.focus && String(v.id) > String(best.id))) best = v;
+    }
+    return !best || best.id === myId;
+  }
+
+  window.addEventListener('focus', function () { lastFocusAt = Date.now(); beat(); });
+  window.addEventListener('blur', beat);
+  window.addEventListener('pagehide', function () {
+    try { localStorage.removeItem(HB_PREFIX + myId); } catch (e) {}
+  });
+  setInterval(beat, HB_MS);
 
   function warn(msg, err) {
     if (window.console) window.console.warn('piper_tts: ' + msg, err);
@@ -113,6 +177,7 @@
         if (payload.EVENT_DATA.NAME !== 'PIPER_TTS') return;
         var data = payload.EVENT_DATA.VALUE;
         if (data && data.COMMAND === 'PlayAudio' && data.URL) {
+          if (!amISpeaker()) return;
           enqueue(data.URL);
         }
       } catch (e) {}
@@ -141,6 +206,7 @@
   }
 
   document.addEventListener('visibilitychange', function () {
+    beat();
     if (document.hidden) {
       disconnect();
     } else {
