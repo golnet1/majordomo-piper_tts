@@ -5,7 +5,7 @@
         <div class="panel-heading">
             <a data-toggle="collapse" data-parent="#pt_help_accordion" href="#pt_help_common">Общее</a>
         </div>
-        <div class="panel-body collapse in" id="pt_help_common">
+        <div class="panel-body collapse" id="pt_help_common">
             <p><strong>Piper TTS</strong> — модуль синтеза русской речи для MajorDoMo. Использует Piper (движок TTS на основе нейросетей) для преобразования текста в речь. Поддерживает локальный запуск Piper на сервере и подключение к удалённому HTTP API Piper.</p>
             <p>В заголовке модуля отображаются цветные индикаторы состояния:</p>
             <ul>
@@ -210,7 +210,7 @@
         <div class="panel-heading">
             <a data-toggle="collapse" data-parent="#pt_help_dict_accordion" href="#pt_help_dict_intro">О словаре</a>
         </div>
-        <div class="panel-body collapse in" id="pt_help_dict_intro">
+        <div class="panel-body collapse" id="pt_help_dict_intro">
             <p>Вкладка <strong>«Словарь»</strong> задаёт свой порядок чтения: как произносить слова, сокращения, названия устройств, комнат и брендов. Правила применяются к тексту перед синтезом по порядку сверху вниз, поэтому ими можно поменять и встроенное чтение (например, «Wi-Fi»).</p>
             <p>При первой установке таблица заполняется примерами: единицы измерения (<code>км/ч</code>, <code>м/с</code>), часовые пояса (<code>UTC</code>, <code>GMT</code>, <code>MSK</code>, <code>EDT</code>…, <code>AEST</code>), <code>МСК</code> и служебные знаки (<code>* # @ $ ^ &amp; \ / | _ " « » &lt; &gt; [ ] { }</code>), которые просто вырезаются из текста. Примеры можно править и удалять.</p>
             <p>Примеры создаются только один раз, при пустой таблице. Если правила уже есть, модуль их не трогает.</p>
@@ -277,7 +277,7 @@
         <div class="panel-heading">
             <a data-toggle="collapse" data-parent="#pt_help_norm_accordion" href="#pt_help_norm_units">Числа и единицы</a>
         </div>
-        <div class="panel-body collapse in" id="pt_help_norm_units">
+        <div class="panel-body collapse" id="pt_help_norm_units">
             <table class="table table-bordered" style="width:auto">
                 <tr><td><code>+9°C</code></td><td>плюс 9 градусов</td></tr>
                 <tr><td><code>1,5 м/с</code></td><td>полтора метра в секунду</td></tr>
@@ -325,7 +325,7 @@
         <div class="panel-heading">
             <a data-toggle="collapse" data-parent="#pt_help_sys_accordion" href="#pt_help_arch">Архитектура</a>
         </div>
-        <div class="panel-body collapse in" id="pt_help_arch">
+        <div class="panel-body collapse" id="pt_help_arch">
             <p>Локальный Piper (бинарник или pip-пакет) устанавливается <b>только на 64-битных</b> системах: <code>x86_64</code>, <code>amd64</code>, <code>aarch64</code>.</p>
             <p>Сам модуль MajorDoMo устанавливается на любую архитектуру, включая 32-битные: <code>armv7l</code>, <code>i686</code>.</p>
             <p>На 32-битных системах кнопка «Установить Piper» и раздел «Управление моделями» автоматически скрыты.</p>
@@ -358,7 +358,7 @@
         <div class="panel-heading">
             <a data-toggle="collapse" data-parent="#pt_help_remote_accordion" href="#pt_help_remote_install">Установка и запуск</a>
         </div>
-        <div class="panel-body collapse in" id="pt_help_remote_install">
+        <div class="panel-body collapse" id="pt_help_remote_install">
             <p>Выполните эти команды на сервере, который будет работать как TTS-движок (Linux x86_64 / aarch64):</p>
             <pre style="background:#e9ecef;padding:10px;border-radius:3px;font-size:12px">
 # Установка системных зависимостей
@@ -451,7 +451,7 @@ systemctl restart piper
         <div class="panel-heading">
             <a data-toggle="collapse" data-parent="#pt_help_local_accordion" href="#pt_help_local_manual">Если автоматическая установка не сработала</a>
         </div>
-        <div class="panel-body collapse in" id="pt_help_local_manual">
+        <div class="panel-body collapse" id="pt_help_local_manual">
             <p>Автоматическая установка (кнопка <b>Установить Piper</b>) может не сработать на Raspberry Pi, устаревших версиях ОС, при отсутствии pip или ошибках сборки. В таких случаях установите Piper вручную:</p>
             <pre style="background:#e9ecef;padding:10px;border-radius:3px;font-size:12px">
 apt update && apt install -y curl wget git libespeak-ng1 libstdc++6 python3-venv python3-dev
