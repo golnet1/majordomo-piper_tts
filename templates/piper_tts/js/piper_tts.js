@@ -11,17 +11,23 @@
   // visibilitychange рвёт их сокет. Но два видимых окна рядом оба получают
   // событие и играют одновременно. Поэтому страницы договариваются через
   // localStorage (он общий для всех вкладок и окон одного браузера): каждая
-  // пишет метку со временем последнего фокуса, а играет только самая свежая
+  // пишет метку со временем последней активности, а играет только самая свежая
   // из видимых. Если браузер вообще без фокуса, продолжает говорить последнее
   // активное окно - так объявления не теряются.
   var HB_MS = 1000;
   var HB_ALIVE_MS = 3000;
   var HB_PREFIX = 'piper_tts_hb:';
   var myId = Math.random().toString(36).slice(2) + Date.now().toString(36);
-  var lastFocusAt = Date.now();
+
+  // Время последней активности этой страницы. Обновляется ТОЛЬКО событиями
+  // (фокус, клик, клавиша) и никогда - в момент проверки. Иначе каждая
+  // страница, проверяя себя, подставляла себе текущее время, все окна
+  // считали себя самыми свежими и говорили одновременно. Браузер к тому же
+  // сообщает document.hasFocus()=true сразу нескольким видимым окнам, поэтому
+  // на него в проверке опираться нельзя.
+  var lastFocusAt = document.hasFocus() ? Date.now() : 0;
 
   function beat() {
-    if (document.hasFocus()) lastFocusAt = Date.now();
     try {
       localStorage.setItem(HB_PREFIX + myId, JSON.stringify({
         id: myId, focus: lastFocusAt, hidden: document.hidden ? 1 : 0, seen: Date.now()
@@ -60,8 +66,16 @@
     return !best || best.id === myId;
   }
 
-  window.addEventListener('focus', function () { lastFocusAt = Date.now(); beat(); });
+  // Метку о себе обновляем на любое действие пользователя: переключение окна,
+  // клик, клавиша. Так "свежим" становится именно то окно, которым пользуются,
+  // и ровно оно одно говорит.
+  function markActive() { lastFocusAt = Date.now(); }
+  window.addEventListener('focus', function () { markActive(); beat(); });
   window.addEventListener('blur', beat);
+  document.addEventListener('mousedown', markActive, true);
+  document.addEventListener('keydown', markActive, true);
+  document.addEventListener('touchstart', markActive, { capture: true, passive: true });
+  document.addEventListener('wheel', markActive, { capture: true, passive: true });
   window.addEventListener('pagehide', function () {
     try { localStorage.removeItem(HB_PREFIX + myId); } catch (e) {}
   });

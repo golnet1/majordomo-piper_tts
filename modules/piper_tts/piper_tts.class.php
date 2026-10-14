@@ -960,7 +960,7 @@ class piper_tts extends module
             $out['IMPORT_FAILED'] = $this->e(base64_decode(strtr((string)gr('ifail'), '-_', '+/')) ?: '');
         }
         $out['TAB_HELP'] = ($tab == 'help') ? '1' : '0';
-        $out['VERSION'] = '1.2.2';
+        $out['VERSION'] = '1.2.4';
 
         if ($this->view_mode == 'dict_import') {
             $this->redirect('?action=piper_tts&tab=dict&' . $this->importDict());
@@ -2199,7 +2199,10 @@ EOD;
 
         subscribeToEvent($this->name, 'SAY', '', 110);
         subscribeToEvent($this->name, 'SAYTO', '', 110);
-        subscribeToEvent($this->name, 'SAYREPLY', '', 110);
+        // SAYREPLY не нужен: sayReply() сам вызывает sayTo() или say(), а затем
+        // шлёт SAYREPLY. Обе подписки обрабатывали одну и ту же фразу, и
+        // браузерный плеер произносил ответ дважды. Снимаем и у прежних версий.
+        unsubscribeFromEvent($this->name, 'SAYREPLY');
 
         // --- Общий modules/prepend.php (загрузчик) ---
         $loaderPath = ROOT . 'modules/prepend.php';
