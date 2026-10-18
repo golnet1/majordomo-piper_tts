@@ -843,6 +843,7 @@ class piper_tts extends module
                 $this->config['MODEL'],
                 $this->config['LENGTH_SCALE'],
                 $this->config['SENTENCE_SILENCE'],
+                $this->getLeadSilence(),
                 self::TEXT_VERSION,
             )));
             $path = $dir . '/piper_dict_' . $key . '.wav';
