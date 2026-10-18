@@ -48,6 +48,13 @@
    </div>
   </div>
   <div class="form-group">
+   <label class="control-label col-lg-4"><#LANG_PIPER_TTS_LEAD_SILENCE#></label>
+   <div class="col-lg-6">
+    <input type="range" name="lead_silence" min="0" max="3" step="0.1" value="[#LEAD_SILENCE#]" class="form-control" oninput="document.getElementById('lbl_lead_silence').textContent=this.value" style="display:inline-block;width:calc(100% - 50px);vertical-align:middle">
+    <span id="lbl_lead_silence" style="display:inline-block;width:40px;text-align:center;font-weight:bold">[#LEAD_SILENCE#]</span>
+   </div>
+  </div>
+  <div class="form-group">
    <label class="control-label col-lg-4" for="piper_test_text"><#LANG_PIPER_TTS_TEST#></label>
    <div class="col-lg-6">
     <textarea id="piper_test_text" class="form-control" rows="2">В Москве сейчас около +9°C, пасмурно, ощущается как +7°. Ветер слабый (~1,5 м/с), влажность высокая (~86%). На сегодня: облачно, местами слабый дождь, днём +8…+11°.</textarea>
@@ -91,6 +98,7 @@
   <script>
   document.getElementById('lbl_length_scale').textContent=document.getElementsByName('length_scale')[0].value;
   document.getElementById('lbl_sentence_silence').textContent=document.getElementsByName('sentence_silence')[0].value;
+  document.getElementById('lbl_lead_silence').textContent=document.getElementsByName('lead_silence')[0].value;
   </script>
   <script>
   // «Проверка»: голос и параметры берём прямо со страницы — сохранять не обязательно.
@@ -102,6 +110,8 @@
    if(ls&&ls.value)p+='&length_scale='+encodeURIComponent(ls.value);
    var ss=document.getElementsByName('sentence_silence')[0];
    if(ss&&ss.value)p+='&sentence_silence='+encodeURIComponent(ss.value);
+   var lsd=document.getElementsByName('lead_silence')[0];
+   if(lsd&&lsd.value)p+='&lead_silence='+encodeURIComponent(lsd.value);
    return p;
   }
   function piperTestText(){var ta=document.getElementById('piper_test_text');return ta?ta.value:'';}

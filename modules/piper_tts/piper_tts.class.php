@@ -891,6 +891,7 @@ class piper_tts extends module
 
         $out['LENGTH_SCALE'] = $this->e($this->config['LENGTH_SCALE']);
         $out['SENTENCE_SILENCE'] = $this->e($this->config['SENTENCE_SILENCE']);
+        $out['LEAD_SILENCE'] = $this->e($this->config['LEAD_SILENCE']);
         $out['USE_CACHE'] = $this->config['USE_CACHE'] ? 'checked' : '';
         $out['CACHE_DIR'] = $this->e($this->config['CACHE_DIR']);
         $out['CACHE_CLEANUP'] = $this->config['CACHE_CLEANUP'] ? 'checked' : '';
@@ -960,7 +961,7 @@ class piper_tts extends module
             $out['IMPORT_FAILED'] = $this->e(base64_decode(strtr((string)gr('ifail'), '-_', '+/')) ?: '');
         }
         $out['TAB_HELP'] = ($tab == 'help') ? '1' : '0';
-        $out['VERSION'] = '1.2.4';
+        $out['VERSION'] = '1.3.0';
 
         if ($this->view_mode == 'dict_import') {
             $this->redirect('?action=piper_tts&tab=dict&' . $this->importDict());
@@ -980,6 +981,7 @@ class piper_tts extends module
             $this->config['MODEL'] = gr('model', $this->config['MODEL']);
             $this->config['LENGTH_SCALE'] = gr('length_scale', $this->config['LENGTH_SCALE']);
             $this->config['SENTENCE_SILENCE'] = gr('sentence_silence', $this->config['SENTENCE_SILENCE']);
+            $this->config['LEAD_SILENCE'] = sprintf('%.1f', max(0.0, min(5.0, (float)gr('lead_silence', $this->config['LEAD_SILENCE']))));
             $this->config['USE_CACHE'] = gr('use_cache', 0) ? 1 : 0;
             $this->config['CACHE_DIR'] = gr('cache_dir', $this->config['CACHE_DIR']);
             $this->config['CACHE_CLEANUP'] = gr('cache_cleanup', 0) ? 1 : 0;
@@ -1470,7 +1472,7 @@ class piper_tts extends module
     private function getLeadSilence()
     {
         if (isset($this->config['LEAD_SILENCE']) && trim((string)$this->config['LEAD_SILENCE']) !== '') {
-            return max(0.0, (float)$this->config['LEAD_SILENCE']);
+            return max(0.0, min(5.0, (float)$this->config['LEAD_SILENCE']));
         }
         return 1.0;
     }
@@ -1746,6 +1748,7 @@ EOD;
         if (($v = gr('model')) !== '') $this->config['MODEL'] = $v;
         if (($v = gr('length_scale')) !== '') $this->config['LENGTH_SCALE'] = $v;
         if (($v = gr('sentence_silence')) !== '') $this->config['SENTENCE_SILENCE'] = $v;
+        if (($v = gr('lead_silence')) !== '') $this->config['LEAD_SILENCE'] = $v;
     }
 
     /**

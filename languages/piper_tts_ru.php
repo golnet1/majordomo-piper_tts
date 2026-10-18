@@ -7,6 +7,7 @@ $dictionary = array(
     'PIPER_TTS_MODELS_DIR' => 'Директория моделей',
     'PIPER_TTS_LENGTH_SCALE' => 'Скорость',
     'PIPER_TTS_SENTENCE_SILENCE' => 'Пауза между предложениями',
+    'PIPER_TTS_LEAD_SILENCE' => 'Тишина в начале фразы, с',
     'PIPER_TTS_USE_CACHE' => 'Сохранять кэш (повторные фразы не синтезируются)',
     'PIPER_TTS_CACHE_DIR' => 'Директория кэша',
     'PIPER_TTS_WS_PORT' => 'WebSocket port (для отправки аудио в браузер)',

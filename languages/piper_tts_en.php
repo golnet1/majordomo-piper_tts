@@ -7,6 +7,7 @@ $dictionary = array(
     'PIPER_TTS_MODELS_DIR' => 'Models directory',
     'PIPER_TTS_LENGTH_SCALE' => 'Speed',
     'PIPER_TTS_SENTENCE_SILENCE' => 'Sentence silence',
+    'PIPER_TTS_LEAD_SILENCE' => 'Lead silence, s',
     'PIPER_TTS_USE_CACHE' => 'Save cache (repeated phrases are not re-synthesized)',
     'PIPER_TTS_CACHE_DIR' => 'Cache directory',
     'PIPER_TTS_WS_PORT' => 'WebSocket port (for sending audio to browser)',
