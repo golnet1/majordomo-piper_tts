@@ -20,6 +20,7 @@ class piper_tts_addon extends tts_addon
         }
         $this->cfg = array(
             'PIPER_BIN'        => '/usr/local/bin/piper',
+            'MODELS_DIR'       => '/opt/piper/voices',
             'MODEL'            => 'ru_RU-irina-medium',
             'LENGTH_SCALE'     => '0.95',
             'SENTENCE_SILENCE' => '0.15',
@@ -35,7 +36,42 @@ class piper_tts_addon extends tts_addon
                 }
             }
         }
+        // Модульному конфигу, как и основному модулю, достаётся «голое» имя
+        // голоса после переключения из удалённого режима: терминалам нужно
+        // собрать полный путь к .onnx, иначе Piper не найдёт модель.
+        $this->cfg['MODEL'] = $this->resolveModelPath($this->cfg['MODEL']);
         return $this->cfg;
+    }
+
+    /**
+     * MODEL приводится к форме, нужной текущему режиму: удалённому серверу —
+     * имя голоса, локальному Piper — путь к .onnx внутри MODELS_DIR (голое имя
+     * иначе падает с PermissionError в рабочем каталоге piper). Всё, что уже
+     * в нужной форме, возвращается как есть.
+     */
+    private function resolveModelPath($model)
+    {
+        $model = trim((string)$model);
+        if ($model === '') {
+            return $model;
+        }
+        if ($this->isRemoteMode($this->cfg['PIPER_BIN'])) {
+            return strpos($model, '/') === false ? $model : basename($model, '.onnx');
+        }
+        if (strpos($model, '/') !== false) {
+            return $model;
+        }
+        $dir = trim((string)$this->cfg['MODELS_DIR']);
+        if ($dir === '') return $model;
+        $name = basename($model, '.onnx');
+        foreach (array($dir . '/' . $name . '/' . $name . '.onnx', $dir . '/' . $name . '.onnx') as $candidate) {
+            if (is_file($candidate)) return $candidate;
+        }
+        $found = glob($dir . '/*/' . $name . '.onnx');
+        if (is_array($found) && isset($found[0])) return $found[0];
+        $found = glob($dir . '/' . $name . '*.onnx');
+        if (is_array($found) && isset($found[0])) return $found[0];
+        return $model;
     }
 
     private function isRemoteMode($bin)

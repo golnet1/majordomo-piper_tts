@@ -83,10 +83,27 @@ class piper_tts extends module
         if (!isset($this->config['MODELS_DIR']) || trim($this->config['MODELS_DIR']) === '') {
             $this->config['MODELS_DIR'] = '/opt/piper/voices';
         }
-        if (!isset($this->config['MODEL'])) {
+        // Пустая строка возможна: save в update_settings берёт значение через
+        // gr(), а у gr() второй аргумент — это тип, не значение по умолчанию,
+        // поэтому POST без поля model (голосовой список не загрузился) пишет ''.
+        if (!isset($this->config['MODEL']) || trim((string)$this->config['MODEL']) === '') {
             $this->config['MODEL'] = $this->isRemoteMode()
                 ? 'ru_RU-irina-medium'
                 : '/opt/piper/voices/ru_RU-irina-medium/ru_RU-irina-medium.onnx';
+        }
+        // MODEL хранится в форме, удобной текущему режиму: удалённому серверу —
+        // имя голоса (он берёт его из списка /voices), локальному Piper — путь
+        // к .onnx (голое имя он трактует как относительный путь в своём
+        // рабочем каталоге и падает с PermissionError). Форма зависит от
+        // PIPER_BIN, а режим может смениться, поэтому приводим её здесь, при
+        // каждом чтении: иначе после переключения синтез падает до тех пор,
+        // пока пользователь снова не откроет страницу настроек.
+        if ($this->isRemoteMode()) {
+            if (strpos($this->config['MODEL'], '/') !== false) {
+                $this->config['MODEL'] = basename($this->config['MODEL'], '.onnx');
+            }
+        } else {
+            $this->config['MODEL'] = $this->resolveModelPath($this->config['MODEL']);
         }
         if (!isset($this->config['LENGTH_SCALE'])) {
             $this->config['LENGTH_SCALE'] = '0.95';
@@ -466,6 +483,39 @@ class piper_tts extends module
         $this->data = $out;
         $p = new parser(DIR_TEMPLATES . $this->name . '/' . $this->name . '.html', $this->data, $this);
         $this->result = $p->result;
+    }
+
+    /**
+     * Голое имя голоса («ru_RU-denis-medium») превращается в путь к файлу модели
+     * внутри MODELS_DIR. Всё, что уже содержит «/», возвращается как есть.
+     */
+    private function resolveModelPath($model)
+    {
+        $model = trim((string)$model);
+        if ($model === '' || strpos($model, '/') !== false) {
+            return $model;
+        }
+        $dir = trim((string)$this->config['MODELS_DIR']);
+        if ($dir === '') {
+            $dir = '/opt/piper/voices';
+        }
+        $name = basename($model, '.onnx');
+        $candidates = array(
+            $dir . '/' . $name . '/' . $name . '.onnx',
+            $dir . '/' . $name . '.onnx',
+        );
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate)) return $candidate;
+        }
+        $found = glob($dir . '/*/' . $name . '.onnx');
+        if (is_array($found) && isset($found[0])) {
+            return $found[0];
+        }
+        $found = glob($dir . '/' . $name . '*.onnx');
+        if (is_array($found) && isset($found[0])) {
+            return $found[0];
+        }
+        return $model;
     }
 
     private function isRemoteMode()
@@ -979,7 +1029,12 @@ class piper_tts extends module
                     $this->config['MODELS_DIR'] = '/opt/piper/voices';
                 }
             }
-            $this->config['MODEL'] = gr('model', $this->config['MODEL']);
+            // Пустое поле не затирает выбранный голос (см. getConfig()):
+            // иначе в конфиг попадает '', и синтез ломается целиком.
+            $model = gr('model');
+            if (is_string($model) && $model !== '') {
+                $this->config['MODEL'] = $model;
+            }
             $this->config['LENGTH_SCALE'] = gr('length_scale', $this->config['LENGTH_SCALE']);
             $this->config['SENTENCE_SILENCE'] = gr('sentence_silence', $this->config['SENTENCE_SILENCE']);
             $this->config['LEAD_SILENCE'] = sprintf('%.1f', max(0.0, min(5.0, (float)gr('lead_silence', $this->config['LEAD_SILENCE']))));
@@ -1955,6 +2010,12 @@ EOD;
             $model = $this->config['MODEL'];
             $ls = $this->config['LENGTH_SCALE'];
             $ss = $this->config['SENTENCE_SILENCE'];
+            // Отсутствующий файл иначе превращается в безликое «synthesis failed»:
+            // причина бывает разной — модель не скачана, либо в конфиге осталось
+            // имя голоса вместо пути к .onnx (см. resolveModelPath()).
+            if (!is_file($model)) {
+                $this->log('model file not found: ' . $model . ' (MODELS_DIR=' . $this->config['MODELS_DIR'] . ')');
+            }
             $cmd = 'printf %s ' . escapeshellarg($clean) . ' | ' .
                 escapeshellarg($bin) .
                 ' --model ' . escapeshellarg($model) .
